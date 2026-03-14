@@ -1,27 +1,42 @@
 import { useState, useEffect } from "react";
+import type { TranscriptionProvider } from "../lib/types";
 
-const STORAGE_KEY = "assemblyai-api-key";
+const STORAGE_KEYS: Record<TranscriptionProvider, string> = {
+  "assemblyai": "assemblyai-api-key",
+  "ivrit-ai": "runpod-api-key",
+};
+
+const LABELS: Record<TranscriptionProvider, string> = {
+  "assemblyai": "AssemblyAI API Key",
+  "ivrit-ai": "RunPod API Key",
+};
 
 interface Props {
+  provider: TranscriptionProvider;
   onKeyChange: (key: string) => void;
 }
 
-export function ApiKeyInput({ onKeyChange }: Props) {
+export function ApiKeyInput({ provider, onKeyChange }: Props) {
   const [key, setKey] = useState("");
   const [saved, setSaved] = useState(false);
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
+    const storageKey = STORAGE_KEYS[provider];
+    const stored = localStorage.getItem(storageKey);
     if (stored) {
       setKey(stored);
       setSaved(true);
       onKeyChange(stored);
+    } else {
+      setKey("");
+      setSaved(false);
+      onKeyChange("");
     }
-  }, [onKeyChange]);
+  }, [provider, onKeyChange]);
 
   function handleSave() {
-    localStorage.setItem(STORAGE_KEY, key);
+    localStorage.setItem(STORAGE_KEYS[provider], key);
     onKeyChange(key);
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
@@ -35,7 +50,7 @@ export function ApiKeyInput({ onKeyChange }: Props) {
   return (
     <div className="flex items-center gap-2">
       <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
-        AssemblyAI API Key
+        {LABELS[provider]}
       </label>
       <div className="relative flex-1">
         <input

@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { ProviderSelector } from "./components/ProviderSelector";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { FileUploader } from "./components/FileUploader";
@@ -6,9 +7,15 @@ import { AudioRecorder } from "./components/AudioRecorder";
 import { TranscriptDisplay } from "./components/TranscriptDisplay";
 import { ExportButtons } from "./components/ExportButtons";
 import { transcribeAudio } from "./lib/api";
-import type { TranscriptResult } from "./lib/types";
+import { transcribeWithIvrit } from "./lib/ivrit-api";
+import type { TranscriptResult, TranscriptionProvider } from "./lib/types";
+
+const PROVIDER_STORAGE_KEY = "transcription-provider";
 
 function App() {
+  const [provider, setProvider] = useState<TranscriptionProvider>(() => {
+    return (localStorage.getItem(PROVIDER_STORAGE_KEY) as TranscriptionProvider) || "assemblyai";
+  });
   const [apiKey, setApiKey] = useState("");
   const [language, setLanguage] = useState("auto");
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -21,9 +28,27 @@ function App() {
     setApiKey(key);
   }, []);
 
+  function handleProviderChange(p: TranscriptionProvider) {
+    setProvider(p);
+    localStorage.setItem(PROVIDER_STORAGE_KEY, p);
+    if (p === "ivrit-ai" && language === "auto") {
+      setLanguage("he");
+    }
+  }
+
+  useEffect(() => {
+    if (provider === "ivrit-ai" && language === "auto") {
+      setLanguage("he");
+    }
+  }, [provider, language]);
+
   async function handleTranscribe() {
     if (!apiKey) {
-      setError("Please enter your AssemblyAI API key.");
+      setError(
+        provider === "assemblyai"
+          ? "Please enter your AssemblyAI API key."
+          : "Please enter your RunPod API key."
+      );
       return;
     }
     if (!audioFile) {
@@ -36,12 +61,25 @@ function App() {
     setIsTranscribing(true);
 
     try {
-      const result = await transcribeAudio(
-        audioFile,
-        apiKey,
-        language === "auto" ? undefined : language,
-        setStatus
-      );
+      const langCode = language === "auto" ? undefined : language;
+      let result: TranscriptResult;
+
+      if (provider === "ivrit-ai") {
+        result = await transcribeWithIvrit(
+          audioFile,
+          apiKey,
+          langCode,
+          setStatus
+        );
+      } else {
+        result = await transcribeAudio(
+          audioFile,
+          apiKey,
+          langCode,
+          setStatus
+        );
+      }
+
       setTranscript(result);
       setStatus("");
     } catch (err) {
@@ -60,7 +98,11 @@ function App() {
         </h1>
 
         <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-6">
-          <ApiKeyInput onKeyChange={handleKeyChange} />
+          <ProviderSelector value={provider} onChange={handleProviderChange} />
+
+          <div className="border-t border-gray-100 pt-4">
+            <ApiKeyInput provider={provider} onKeyChange={handleKeyChange} />
+          </div>
 
           <div className="border-t border-gray-100 pt-4">
             <LanguageSelector value={language} onChange={setLanguage} />

@@ -69,10 +69,27 @@ export function FileUploader({ onFileSelect, currentFile }: Props) {
         </p>
       </div>
       {currentFile && (
-        <p className="text-sm text-gray-600 mt-2">
-          Selected: <span className="font-medium">{currentFile.name}</span>{" "}
-          ({formatSize(currentFile.size)})
-        </p>
+        <div className="flex items-center gap-2 mt-2">
+          <p className="text-sm text-gray-600">
+            Selected: <span className="font-medium">{currentFile.name}</span>{" "}
+            ({formatSize(currentFile.size)})
+          </p>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              const url = URL.createObjectURL(currentFile);
+              const a = document.createElement("a");
+              a.href = url;
+              a.download = currentFile.name;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="text-xs text-blue-600 hover:text-blue-800 underline"
+          >
+            Download
+          </button>
+        </div>
       )}
     </div>
   );
