@@ -1,5 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
-import { ProviderSelector } from "./components/ProviderSelector";
+import { useState, useCallback } from "react";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { LanguageSelector } from "./components/LanguageSelector";
 import { FileUploader } from "./components/FileUploader";
@@ -10,12 +9,8 @@ import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
 import type { TranscriptResult, TranscriptionProvider } from "./lib/types";
 
-const PROVIDER_STORAGE_KEY = "transcription-provider";
-
 function App() {
-  const [provider, setProvider] = useState<TranscriptionProvider>(() => {
-    return (localStorage.getItem(PROVIDER_STORAGE_KEY) as TranscriptionProvider) || "assemblyai";
-  });
+  const provider: TranscriptionProvider = "assemblyai";
   const [apiKey, setApiKey] = useState("");
   const [language, setLanguage] = useState("auto");
   const [audioFile, setAudioFile] = useState<File | null>(null);
@@ -27,20 +22,6 @@ function App() {
   const handleKeyChange = useCallback((key: string) => {
     setApiKey(key);
   }, []);
-
-  function handleProviderChange(p: TranscriptionProvider) {
-    setProvider(p);
-    localStorage.setItem(PROVIDER_STORAGE_KEY, p);
-    if (p === "ivrit-ai" && language === "auto") {
-      setLanguage("he");
-    }
-  }
-
-  useEffect(() => {
-    if (provider === "ivrit-ai" && language === "auto") {
-      setLanguage("he");
-    }
-  }, [provider, language]);
 
   async function handleTranscribe() {
     if (!apiKey) {
@@ -98,11 +79,7 @@ function App() {
         </h1>
 
         <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-6">
-          <ProviderSelector value={provider} onChange={handleProviderChange} />
-
-          <div className="border-t border-gray-100 pt-4">
-            <ApiKeyInput provider={provider} onKeyChange={handleKeyChange} />
-          </div>
+          <ApiKeyInput provider={provider} onKeyChange={handleKeyChange} />
 
           <div className="border-t border-gray-100 pt-4">
             <LanguageSelector value={language} onChange={setLanguage} />
@@ -169,7 +146,7 @@ function App() {
                 audioDuration={transcript.audio_duration}
               />
             </div>
-            <TranscriptDisplay utterances={transcript.utterances} />
+            <TranscriptDisplay utterances={transcript.utterances} language={language} />
           </div>
         )}
       </div>

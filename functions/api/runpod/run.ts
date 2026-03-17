@@ -10,7 +10,10 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   const endpointId = context.env.RUNPOD_ENDPOINT_ID;
   if (!endpointId) {
-    return new Response("RunPod endpoint not configured", { status: 500 });
+    return new Response(
+      JSON.stringify({ error: "RunPod endpoint not configured" }),
+      { status: 500, headers: { "Content-Type": "application/json" } }
+    );
   }
 
   const body = await context.request.text();

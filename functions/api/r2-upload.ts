@@ -1,5 +1,11 @@
+import { getPresignedUrl } from "../lib/presign";
+
 interface Env {
   TRANSCRIPTION_UPLOADS: R2Bucket;
+  R2_ACCOUNT_ID: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_BUCKET_NAME: string;
 }
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -23,10 +29,15 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
     httpMetadata: { contentType: file.type || "application/octet-stream" },
   });
 
-  const url = new URL(context.request.url);
-  const publicUrl = `${url.origin}/r2/${key}`;
+  const url = await getPresignedUrl({
+    accountId: context.env.R2_ACCOUNT_ID,
+    accessKeyId: context.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: context.env.R2_SECRET_ACCESS_KEY,
+    bucket: context.env.R2_BUCKET_NAME,
+    key,
+  });
 
-  return new Response(JSON.stringify({ url: publicUrl }), {
+  return new Response(JSON.stringify({ url, key }), {
     headers: { "Content-Type": "application/json" },
   });
 };

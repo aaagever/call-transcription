@@ -16,11 +16,15 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
+const RTL_LANGUAGES = new Set(["he", "ar", "fa", "ur", "yi"]);
+
 interface Props {
   utterances: Utterance[];
+  language?: string;
 }
 
-export function TranscriptDisplay({ utterances }: Props) {
+export function TranscriptDisplay({ utterances, language }: Props) {
+  const isRtl = language ? RTL_LANGUAGES.has(language) : false;
   const speakerIds = [...new Set(utterances.map((u) => u.speaker))];
 
   function getSpeakerColor(speaker: string): string {
@@ -29,7 +33,7 @@ export function TranscriptDisplay({ utterances }: Props) {
   }
 
   return (
-    <div className="text-left space-y-4">
+    <div className={`space-y-4 ${isRtl ? "text-right" : "text-left"}`} dir={isRtl ? "rtl" : undefined}>
       {utterances.map((u, i) => (
         <div key={i}>
           <div className="flex items-baseline gap-2 mb-1">

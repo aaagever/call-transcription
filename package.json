@@ -11,6 +11,7 @@
     "deploy": "npm run build && wrangler pages deploy dist"
   },
   "dependencies": {
+    "aws4fetch": "1.0.20",
     "docx": "9.6.1",
     "file-saver": "2.0.5",
     "react": "^19.2.4",

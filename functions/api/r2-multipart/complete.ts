@@ -1,5 +1,11 @@
+import { getPresignedUrl } from "../../lib/presign";
+
 interface Env {
   TRANSCRIPTION_UPLOADS: R2Bucket;
+  R2_ACCOUNT_ID: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_BUCKET_NAME: string;
 }
 
 interface UploadedPart {
@@ -22,11 +28,16 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   const multipart = bucket.resumeMultipartUpload(key, uploadId);
   await multipart.complete(parts);
 
-  const reqUrl = new URL(context.request.url);
-  const publicUrl = `${reqUrl.origin}/r2/${key}`;
+  const url = await getPresignedUrl({
+    accountId: context.env.R2_ACCOUNT_ID,
+    accessKeyId: context.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: context.env.R2_SECRET_ACCESS_KEY,
+    bucket: context.env.R2_BUCKET_NAME,
+    key,
+  });
 
   return new Response(
-    JSON.stringify({ url: publicUrl }),
+    JSON.stringify({ url, key }),
     { headers: { "Content-Type": "application/json" } }
   );
 };

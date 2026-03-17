@@ -56,4 +56,5 @@ export interface RunPodJobResponse {
 
 export interface R2UploadResponse {
   url: string;
+  key: string;
 }

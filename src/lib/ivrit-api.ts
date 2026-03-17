@@ -218,6 +218,18 @@ function normalizeSegments(segments: RunPodSegment[]): {
   return { utterances, text, duration: maxEnd };
 }
 
+async function deleteFromR2(key: string): Promise<void> {
+  try {
+    await fetch(`${API_BASE}/r2-delete`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key }),
+    });
+  } catch {
+    // Best-effort cleanup -- don't fail the transcription
+  }
+}
+
 export async function transcribeWithIvrit(
   file: File,
   apiKey: string,
@@ -225,6 +237,7 @@ export async function transcribeWithIvrit(
   onStatusChange?: (status: string) => void
 ): Promise<TranscriptResult> {
   let audioUrl: string | null = null;
+  let r2Key: string | null = null;
 
   if (file.size <= BLOB_SIZE_LIMIT) {
     onStatusChange?.("Preparing audio...");
@@ -235,6 +248,7 @@ export async function transcribeWithIvrit(
       onStatusChange?.(`Uploading audio to storage... ${pct}%`);
     });
     audioUrl = r2Result.url;
+    r2Key = r2Result.key;
   }
 
   onStatusChange?.("Starting transcription...");
@@ -276,11 +290,14 @@ export async function transcribeWithIvrit(
 
           if (!segments || segments.length === 0) {
             console.warn("ivrit-ai response structure:", JSON.stringify(output));
+            if (r2Key) deleteFromR2(r2Key);
             reject(new Error("Transcription completed but returned no segments"));
             return;
           }
 
           const { utterances, text, duration } = normalizeSegments(segments);
+
+          if (r2Key) deleteFromR2(r2Key);
 
           resolve({
             id: currentJobId,
@@ -310,6 +327,7 @@ export async function transcribeWithIvrit(
             onStatusChange?.("Transcribing...");
             setTimeout(poll, 3000);
           } else {
+            if (r2Key) deleteFromR2(r2Key);
             reject(new Error(result.error || `Transcription ${result.status.toLowerCase()}`));
           }
         } else {

@@ -2,6 +2,10 @@ name = "call-transcription"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "dist"
 
+[vars]
+RUNPOD_ENDPOINT_ID = "7xdjmljs57rjj5"
+R2_BUCKET_NAME = "call-transcription-uploads"
+
 [[r2_buckets]]
 binding = "TRANSCRIPTION_UPLOADS"
 bucket_name = "call-transcription-uploads"
