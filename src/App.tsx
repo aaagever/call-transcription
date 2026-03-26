@@ -9,6 +9,32 @@ import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
 import type { TranscriptResult, TranscriptionProvider } from "./lib/types";
 
+function playTone(type: "success" | "error") {
+  const ctx = new AudioContext();
+  const osc = ctx.createOscillator();
+  const gain = ctx.createGain();
+  osc.connect(gain);
+  gain.connect(ctx.destination);
+  gain.gain.value = 0.3;
+
+  if (type === "success") {
+    osc.frequency.value = 523; // C5
+    osc.start();
+    osc.frequency.setValueAtTime(659, ctx.currentTime + 0.15); // E5
+    osc.frequency.setValueAtTime(784, ctx.currentTime + 0.3); // G5
+    gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.4);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.6);
+    osc.stop(ctx.currentTime + 0.6);
+  } else {
+    osc.frequency.value = 400;
+    osc.start();
+    osc.frequency.setValueAtTime(300, ctx.currentTime + 0.2);
+    gain.gain.setValueAtTime(0.3, ctx.currentTime + 0.3);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.5);
+    osc.stop(ctx.currentTime + 0.5);
+  }
+}
+
 function App() {
   const provider: TranscriptionProvider = "assemblyai";
   const [apiKey, setApiKey] = useState("");
@@ -63,9 +89,11 @@ function App() {
 
       setTranscript(result);
       setStatus("");
+      playTone("success");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Transcription failed");
       setStatus("");
+      playTone("error");
     } finally {
       setIsTranscribing(false);
     }
@@ -97,6 +125,7 @@ function App() {
             <button
               onClick={handleTranscribe}
               disabled={isTranscribing || !apiKey || !audioFile}
+              title={!apiKey ? "Enter your API key first" : !audioFile ? "Upload or record an audio file first" : undefined}
               className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {isTranscribing ? "Transcribing..." : "Transcribe"}
