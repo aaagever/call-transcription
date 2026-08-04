@@ -6,6 +6,7 @@ export interface Language {
 export const languages: Language[] = [
   { code: "auto", name: "Auto-detect" },
   { code: "en", name: "English" },
+  { code: "he", name: "Hebrew" },
   { code: "es", name: "Spanish" },
   { code: "fr", name: "French" },
   { code: "de", name: "German" },
@@ -22,6 +23,5 @@ export const languages: Language[] = [
   { code: "tr", name: "Turkish" },
   { code: "uk", name: "Ukrainian" },
   { code: "vi", name: "Vietnamese" },
-  { code: "he", name: "Hebrew" },
   { code: "ar", name: "Arabic" },
 ];
