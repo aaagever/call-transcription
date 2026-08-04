@@ -1,9 +1,19 @@
-import type { TranscriptResult, UploadResponse, R2UploadResponse } from "./types";
+import type { TranscriptResult, UploadResponse, R2UploadResponse, SpeechModel } from "./types";
 
 const API_BASE = "/api";
 
 const R2_THRESHOLD = 90 * 1024 * 1024; // 90MB - under Cloudflare's 100MB limit
 const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB per chunk
+
+// Maps the user-selected model to an AssemblyAI speech_models priority list.
+// speech_models is a priority order with automatic fallback: AssemblyAI uses
+// the first model that supports the audio's language, otherwise the next.
+const SPEECH_MODEL_PRIORITY: Record<SpeechModel, string[]> = {
+  // Newest flagship (best English + Hebrew); Universal-2 covers anything it doesn't.
+  "universal-3-5-pro": ["universal-3-5-pro", "universal-2"],
+  // Broadest language coverage, lower cost.
+  "universal-2": ["universal-2"],
+};
 
 // ---- Error handling ----------------------------------------------------
 // The browser's raw fetch error is just "Failed to fetch", which tells the
@@ -193,12 +203,13 @@ async function deleteFromR2(key: string): Promise<void> {
 export async function startTranscription(
   audioUrl: string,
   apiKey: string,
-  languageCode?: string
+  languageCode?: string,
+  model: SpeechModel = "universal-3-5-pro"
 ): Promise<TranscriptResult> {
   const body: Record<string, unknown> = {
     audio_url: audioUrl,
     speaker_labels: true,
-    speech_models: ["universal-3-pro", "universal-2"],
+    speech_models: SPEECH_MODEL_PRIORITY[model],
   };
 
   if (languageCode && languageCode !== "auto") {
@@ -242,6 +253,7 @@ export async function transcribeAudio(
   file: File,
   apiKey: string,
   languageCode?: string,
+  model: SpeechModel = "universal-3-5-pro",
   onStatusChange?: (status: string) => void
 ): Promise<TranscriptResult> {
   let audioUrl: string;
@@ -264,7 +276,7 @@ export async function transcribeAudio(
   }
 
   onStatusChange?.("Starting transcription...");
-  const transcript = await startTranscription(audioUrl, apiKey, languageCode);
+  const transcript = await startTranscription(audioUrl, apiKey, languageCode, model);
 
   onStatusChange?.("Transcribing...");
   return new Promise((resolve, reject) => {

@@ -1,13 +1,14 @@
 import { useState, useCallback } from "react";
 import { ApiKeyInput } from "./components/ApiKeyInput";
 import { LanguageSelector } from "./components/LanguageSelector";
+import { ModelSelector } from "./components/ModelSelector";
 import { FileUploader } from "./components/FileUploader";
 import { AudioRecorder } from "./components/AudioRecorder";
 import { TranscriptDisplay } from "./components/TranscriptDisplay";
 import { ExportButtons } from "./components/ExportButtons";
 import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
-import type { TranscriptResult, TranscriptionProvider } from "./lib/types";
+import type { TranscriptResult, TranscriptionProvider, SpeechModel } from "./lib/types";
 
 function playTone(type: "success" | "error") {
   const ctx = new AudioContext();
@@ -39,6 +40,7 @@ function App() {
   const provider: TranscriptionProvider = "assemblyai";
   const [apiKey, setApiKey] = useState("");
   const [language, setLanguage] = useState("auto");
+  const [model, setModel] = useState<SpeechModel>("universal-3-5-pro");
   const [audioFile, setAudioFile] = useState<File | null>(null);
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [status, setStatus] = useState("");
@@ -83,6 +85,7 @@ function App() {
           audioFile,
           apiKey,
           langCode,
+          model,
           setStatus
         );
       }
@@ -109,8 +112,9 @@ function App() {
         <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-6">
           <ApiKeyInput provider={provider} onKeyChange={handleKeyChange} />
 
-          <div className="border-t border-gray-100 pt-4">
+          <div className="border-t border-gray-100 pt-4 space-y-3">
             <LanguageSelector value={language} onChange={setLanguage} />
+            <ModelSelector value={model} onChange={setModel} />
           </div>
 
           <div className="border-t border-gray-100 pt-4">

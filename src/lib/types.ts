@@ -1,5 +1,8 @@
 export type TranscriptionProvider = "assemblyai" | "ivrit-ai";
 
+// AssemblyAI speech model the user can pick in the UI.
+export type SpeechModel = "universal-3-5-pro" | "universal-2";
+
 export interface Utterance {
   speaker: string;
   text: string;
