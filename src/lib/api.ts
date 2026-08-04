@@ -5,6 +5,95 @@ const API_BASE = "/api";
 const R2_THRESHOLD = 90 * 1024 * 1024; // 90MB - under Cloudflare's 100MB limit
 const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB per chunk
 
+// ---- Error handling ----------------------------------------------------
+// The browser's raw fetch error is just "Failed to fetch", which tells the
+// user nothing. These helpers turn network-level failures and error
+// responses into clear, actionable messages tagged with the step that failed.
+
+type Step = "upload" | "create" | "part" | "complete" | "transcribe" | "poll";
+
+// Human phrase for each step, used inside "...while {label}." sentences.
+const STEP_LABEL: Record<Step, string> = {
+  upload: "uploading your audio",
+  create: "starting the upload",
+  part: "uploading your audio",
+  complete: "finalizing the upload",
+  transcribe: "starting the transcription",
+  poll: "checking the transcription status",
+};
+
+// Steps that send the audio file: their errors get the "extract to MP3" tip,
+// since oversized uploads are the usual cause.
+const UPLOAD_STEPS: ReadonlySet<Step> = new Set(["upload", "create", "part", "complete"]);
+const MP3_TIP =
+  " If this is a large recording, extract the audio to an MP3 (much smaller) and upload that instead.";
+
+function httpMessage(step: Step, status: number, body: string): string {
+  const label = STEP_LABEL[step];
+  const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : " Please try again in a moment.";
+
+  if (status === 401 || status === 403) {
+    return "Your AssemblyAI API key was rejected. Check the key and try again.";
+  }
+  if (status === 413) {
+    return `The file is too large for the server to accept while ${label}.${MP3_TIP}`;
+  }
+  if (status === 429) {
+    return "The transcription service is rate-limiting requests. Wait a moment and try again.";
+  }
+  if (status >= 500) {
+    // Cloudflare worker exceptions surface as an "error code: 11xx" page.
+    const workerCode = body.match(/error code: 1\d{3}/i)?.[0];
+    const codePart = workerCode ? ` (${workerCode})` : ` (status ${status})`;
+    return `The server hit an error while ${label}${codePart}.${tip}`;
+  }
+  // Other 4xx: surface the server's own short message if it looks useful.
+  const detail = body && body.length > 0 && body.length < 200 ? ` ${body}` : "";
+  return `Something went wrong while ${label} (status ${status}).${detail}`;
+}
+
+// fetch() that rejects only on network-level problems. Translates those, and
+// any non-OK response, into a friendly Error instead of "Failed to fetch".
+async function apiFetch(url: string, init: RequestInit, step: Step): Promise<Response> {
+  let res: Response;
+  try {
+    res = await fetch(url, init);
+  } catch (err) {
+    // Reasons fetch() itself throws: offline, DNS failure, the connection
+    // being reset mid-upload, CORS, or the page being opened from a file://
+    // URL (where /api routes don't exist). Keep the raw error in the console
+    // for debugging, show the user something they can act on.
+    console.error(`[transcription] network error while ${STEP_LABEL[step]}:`, err);
+    const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : "";
+    throw new Error(
+      `Couldn't reach the server while ${STEP_LABEL[step]}. Try reloading the page, and check your connection.${tip}`
+    );
+  }
+
+  if (!res.ok) {
+    const body = (await res.text().catch(() => "")).trim();
+    throw new Error(httpMessage(step, res.status, body));
+  }
+
+  return res;
+}
+
+// Parse a JSON response, with a clear message if the body isn't JSON
+// (e.g. an HTML error page served by the SPA fallback when a route is missing).
+async function readJson<T>(res: Response, step: Step): Promise<T> {
+  const text = await res.text();
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    console.error(`[transcription] non-JSON response while ${STEP_LABEL[step]}:`, text.slice(0, 200));
+    const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : "";
+    throw new Error(
+      `The server returned an unexpected response while ${STEP_LABEL[step]}. ` +
+        `Try reloading the page. The request may not have reached the right endpoint.${tip}`
+    );
+  }
+}
+
 export async function uploadAudio(
   file: File,
   apiKey: string
@@ -12,18 +101,17 @@ export async function uploadAudio(
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await fetch(`${API_BASE}/upload`, {
-    method: "POST",
-    headers: { "X-Api-Key": apiKey },
-    body: formData,
-  });
+  const res = await apiFetch(
+    `${API_BASE}/upload`,
+    {
+      method: "POST",
+      headers: { "X-Api-Key": apiKey },
+      body: formData,
+    },
+    "upload"
+  );
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `Upload failed (${res.status})`);
-  }
-
-  return res.json();
+  return readJson<UploadResponse>(res, "upload");
 }
 
 async function uploadToR2(
@@ -33,15 +121,19 @@ async function uploadToR2(
   const ext = file.name.includes(".") ? `.${file.name.split(".").pop()}` : "";
 
   // 1. Create multipart upload
-  const createRes = await fetch(`${API_BASE}/r2-multipart/create`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ext }),
-  });
-  if (!createRes.ok) {
-    throw new Error(`Failed to initiate upload (${createRes.status})`);
-  }
-  const { key, uploadId } = await createRes.json();
+  const createRes = await apiFetch(
+    `${API_BASE}/r2-multipart/create`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ext }),
+    },
+    "create"
+  );
+  const { key, uploadId } = await readJson<{ key: string; uploadId: string }>(
+    createRes,
+    "create"
+  );
 
   // 2. Upload chunks
   const parts: { partNumber: number; etag: string }[] = [];
@@ -58,32 +150,32 @@ async function uploadToR2(
     formData.append("uploadId", uploadId);
     formData.append("partNumber", String(i + 1));
 
-    const partRes = await fetch(`${API_BASE}/r2-multipart/upload-part`, {
-      method: "POST",
-      body: formData,
-    });
+    const partRes = await apiFetch(
+      `${API_BASE}/r2-multipart/upload-part`,
+      {
+        method: "POST",
+        body: formData,
+      },
+      "part"
+    );
 
-    if (!partRes.ok) {
-      throw new Error(`Chunk upload failed (${partRes.status})`);
-    }
-
-    const { etag } = await partRes.json();
+    const { etag } = await readJson<{ etag: string }>(partRes, "part");
     parts.push({ partNumber: i + 1, etag });
     onProgress?.((i + 1) / totalChunks);
   }
 
   // 3. Complete multipart upload
-  const completeRes = await fetch(`${API_BASE}/r2-multipart/complete`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ key, uploadId, parts }),
-  });
+  const completeRes = await apiFetch(
+    `${API_BASE}/r2-multipart/complete`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ key, uploadId, parts }),
+    },
+    "complete"
+  );
 
-  if (!completeRes.ok) {
-    throw new Error(`Failed to complete upload (${completeRes.status})`);
-  }
-
-  return completeRes.json();
+  return readJson<R2UploadResponse>(completeRes, "complete");
 }
 
 async function deleteFromR2(key: string): Promise<void> {
@@ -115,37 +207,35 @@ export async function startTranscription(
     body.language_detection = true;
   }
 
-  const res = await fetch(`${API_BASE}/transcribe`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Api-Key": apiKey,
+  const res = await apiFetch(
+    `${API_BASE}/transcribe`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Api-Key": apiKey,
+      },
+      body: JSON.stringify(body),
     },
-    body: JSON.stringify(body),
-  });
+    "transcribe"
+  );
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `Transcription request failed (${res.status})`);
-  }
-
-  return res.json();
+  return readJson<TranscriptResult>(res, "transcribe");
 }
 
 export async function pollTranscript(
   transcriptId: string,
   apiKey: string
 ): Promise<TranscriptResult> {
-  const res = await fetch(`${API_BASE}/transcript/${transcriptId}`, {
-    headers: { "X-Api-Key": apiKey },
-  });
+  const res = await apiFetch(
+    `${API_BASE}/transcript/${transcriptId}`,
+    {
+      headers: { "X-Api-Key": apiKey },
+    },
+    "poll"
+  );
 
-  if (!res.ok) {
-    const err = await res.text();
-    throw new Error(err || `Poll failed (${res.status})`);
-  }
-
-  return res.json();
+  return readJson<TranscriptResult>(res, "poll");
 }
 
 export async function transcribeAudio(
