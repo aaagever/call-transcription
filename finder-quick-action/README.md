@@ -10,7 +10,9 @@ Works on any video type macOS recognizes (mp4, mov, mkv, webm...), single or mul
 ./install.sh
 ```
 
-Requires ffmpeg (`brew install ffmpeg`, already installed on this machine). Re-run `install.sh` after any edit to `extract-mp3.sh`.
+Then enable it once (macOS does not auto-enable newly installed quick actions): right-click any video > Quick Actions > **Customize...** > check **Extract MP3**.
+
+Requires ffmpeg (`brew install ffmpeg`, already installed on this machine). Re-run `install.sh` after any edit to `extract-mp3.sh`; the enable step does not need repeating.
 
 The first run may ask permission to send notifications. Allow it.
 

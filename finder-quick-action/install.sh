@@ -22,4 +22,5 @@ plutil -lint "$DEST/Contents/Info.plist" >/dev/null
 /System/Library/CoreServices/pbs -update 2>/dev/null || true
 
 echo "Installed: $DEST"
+echo "First install only: right-click a video > Quick Actions > Customize... and check Extract MP3"
 echo "Use it: right-click a video in Finder > Quick Actions > Extract MP3"
