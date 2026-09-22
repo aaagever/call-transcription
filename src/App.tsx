@@ -246,6 +246,7 @@ function App() {
                 utterances={transcript.utterances}
                 audioDuration={transcript.audio_duration}
                 recordingDate={recordingDate}
+                sourceFileName={lastRun?.file.name ?? ""}
               />
             </div>
             <TranscriptDisplay utterances={transcript.utterances} language={language} />

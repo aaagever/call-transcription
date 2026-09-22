@@ -10,24 +10,31 @@ interface Props {
   audioDuration: number | null;
   /** ISO calendar date ("YYYY-MM-DD") of the recording, or "" when unset. */
   recordingDate: string;
+  /** Name of the audio file that was transcribed; the downloads are named after it. */
+  sourceFileName: string;
 }
 
-export function ExportButtons({ utterances, audioDuration, recordingDate }: Props) {
+export function ExportButtons({
+  utterances,
+  audioDuration,
+  recordingDate,
+  sourceFileName,
+}: Props) {
   function downloadMarkdown() {
     const content = exportMarkdown(utterances, audioDuration, recordingDate);
     const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-    saveAs(blob, transcriptFileName("md", recordingDate));
+    saveAs(blob, transcriptFileName(sourceFileName, recordingDate, "md"));
   }
 
   function downloadTxt() {
     const content = exportTxt(utterances, audioDuration, recordingDate);
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    saveAs(blob, transcriptFileName("txt", recordingDate));
+    saveAs(blob, transcriptFileName(sourceFileName, recordingDate, "txt"));
   }
 
   async function downloadDocx() {
     const blob = await exportDocx(utterances, audioDuration, recordingDate);
-    saveAs(blob, transcriptFileName("docx", recordingDate));
+    saveAs(blob, transcriptFileName(sourceFileName, recordingDate, "docx"));
   }
 
   const btnClass =

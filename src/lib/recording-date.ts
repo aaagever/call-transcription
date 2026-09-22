@@ -40,9 +40,28 @@ export function formatRecordingDate(isoDate: string): string | null {
   });
 }
 
-/** "transcript-2026-09-15.md" when a date is set, otherwise "transcript.md". */
-export function transcriptFileName(extension: string, isoDate: string): string {
-  return isIsoDate(isoDate)
-    ? `transcript-${isoDate}.${extension}`
-    : `transcript.${extension}`;
+/** "client-call.mp3" -> "client-call"; a name without a dot is returned as is. */
+function stripExtension(fileName: string): string {
+  const dot = fileName.lastIndexOf(".");
+  return dot > 0 ? fileName.slice(0, dot) : fileName;
+}
+
+/**
+ * Download name for an export: the audio file's own name (minus its
+ * extension), then "transcript", then the recording date when one is set.
+ *   ("client-call.mp3", "2026-09-15", "md") -> "client-call-transcript-2026-09-15.md"
+ *   ("client-call.mp3", "",           "md") -> "client-call-transcript.md"
+ *   ("",                "2026-09-15", "md") -> "transcript-2026-09-15.md"
+ */
+export function transcriptFileName(
+  sourceFileName: string,
+  isoDate: string,
+  extension: string
+): string {
+  const parts = [
+    stripExtension(sourceFileName).trim(),
+    "transcript",
+    isIsoDate(isoDate) ? isoDate : "",
+  ].filter((part) => part !== "");
+  return `${parts.join("-")}.${extension}`;
 }

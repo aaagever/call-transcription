@@ -11,7 +11,7 @@ Powered by [AssemblyAI](https://www.assemblyai.com/) -- supports files up to 5GB
 - **Large file support** -- tested with 250MB+ files; no client-side splitting needed
 - **In-browser recording** -- record audio directly using the MediaRecorder API
 - **Export options** -- download transcripts as Markdown (.md), plain text (.txt), or Word (.docx)
-- **Recording date** -- set the date of the meeting or recording once; it goes into the transcript header and the download file names (`transcript-2026-09-15.md`). Prefilled from the audio file's modified date, editable
+- **Recording date** -- set the date of the meeting or recording once; it goes into the transcript header and the download file names, which keep the audio file's own name (`client-call-transcript-2026-09-15.md`). Prefilled from the audio file's modified date, editable
 - **BYO API key** -- your AssemblyAI key stays in localStorage, never stored server-side
 
 ## Tech Stack
