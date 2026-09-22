@@ -11,40 +11,37 @@ const LABELS: Record<TranscriptionProvider, string> = {
   "ivrit-ai": "RunPod API Key",
 };
 
+function readStoredKey(provider: TranscriptionProvider): string {
+  return localStorage.getItem(STORAGE_KEYS[provider]) ?? "";
+}
+
 interface Props {
   provider: TranscriptionProvider;
   onKeyChange: (key: string) => void;
 }
 
+// Renders with key={provider} in App, so a provider switch remounts it and
+// re-reads that provider's stored key.
 export function ApiKeyInput({ provider, onKeyChange }: Props) {
-  const [key, setKey] = useState("");
-  const [saved, setSaved] = useState(false);
+  // What is saved in localStorage, and what is currently in the field.
+  const [storedKey, setStoredKey] = useState(() => readStoredKey(provider));
+  const [key, setKey] = useState(storedKey);
   const [visible, setVisible] = useState(false);
 
+  // Tell the parent which key is in effect on mount.
   useEffect(() => {
-    const storageKey = STORAGE_KEYS[provider];
-    const stored = localStorage.getItem(storageKey);
-    if (stored) {
-      setKey(stored);
-      setSaved(true);
-      onKeyChange(stored);
-    } else {
-      setKey("");
-      setSaved(false);
-      onKeyChange("");
-    }
+    onKeyChange(readStoredKey(provider));
   }, [provider, onKeyChange]);
 
-  function handleSave() {
-    localStorage.setItem(STORAGE_KEYS[provider], key);
-    onKeyChange(key);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
-  }
+  // Nothing to save while the field matches what is already stored.
+  const isSaved = key !== "" && key === storedKey;
+  const canSave = key !== "" && !isSaved;
 
-  function handleChange(value: string) {
-    setKey(value);
-    setSaved(false);
+  function handleSave() {
+    if (!canSave) return;
+    localStorage.setItem(STORAGE_KEYS[provider], key);
+    setStoredKey(key);
+    onKeyChange(key);
   }
 
   return (
@@ -56,7 +53,7 @@ export function ApiKeyInput({ provider, onKeyChange }: Props) {
         <input
           type={visible ? "text" : "password"}
           value={key}
-          onChange={(e) => handleChange(e.target.value)}
+          onChange={(e) => setKey(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === "Enter") handleSave();
           }}
@@ -74,10 +71,11 @@ export function ApiKeyInput({ provider, onKeyChange }: Props) {
       <button
         type="button"
         onClick={handleSave}
-        disabled={!key}
+        disabled={!canSave}
+        title={isSaved ? "This key is saved. Edit it to save a different one." : undefined}
         className="px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-800 text-white hover:bg-gray-900"
       >
-        {saved ? "Saved!" : "Save"}
+        {isSaved ? "Saved" : "Save"}
       </button>
     </div>
   );
