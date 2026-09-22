@@ -12,6 +12,15 @@ import { transcribeWithIvrit } from "./lib/ivrit-api";
 import { formatRecordingDate, toIsoDate } from "./lib/recording-date";
 import type { TranscriptResult, TranscriptionProvider, SpeechModel } from "./lib/types";
 
+// The inputs that define a transcription request. Changing any of them is
+// what re-enables the Transcribe button after a successful run.
+interface TranscriptionInputs {
+  file: File;
+  apiKey: string;
+  language: string;
+  model: SpeechModel;
+}
+
 function playTone(type: "success" | "error") {
   const ctx = new AudioContext();
   const osc = ctx.createOscillator();
@@ -52,6 +61,10 @@ function App() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
+  // Inputs of the last successful transcription. While the current inputs
+  // still match them, the Transcribe button stays disabled so the same file
+  // is not sent again by accident.
+  const [lastRun, setLastRun] = useState<TranscriptionInputs | null>(null);
 
   const handleKeyChange = useCallback((key: string) => {
     setApiKey(key);
@@ -110,6 +123,7 @@ function App() {
       }
 
       setTranscript(result);
+      setLastRun({ file: audioFile, apiKey, language, model });
       setStatus("");
       playTone("success");
     } catch (err) {
@@ -120,6 +134,13 @@ function App() {
       setIsTranscribing(false);
     }
   }
+
+  const alreadyTranscribed =
+    lastRun !== null &&
+    lastRun.file === audioFile &&
+    lastRun.apiKey === apiKey &&
+    lastRun.language === language &&
+    lastRun.model === model;
 
   const recordingDateLabel = formatRecordingDate(recordingDate);
 
@@ -156,11 +177,23 @@ function App() {
           <div className="border-t border-gray-100 pt-4">
             <button
               onClick={handleTranscribe}
-              disabled={isTranscribing || !apiKey || !audioFile}
-              title={!apiKey ? "Enter your API key first" : !audioFile ? "Upload or record an audio file first" : undefined}
+              disabled={isTranscribing || !apiKey || !audioFile || alreadyTranscribed}
+              title={
+                !apiKey
+                  ? "Enter your API key first"
+                  : !audioFile
+                    ? "Upload or record an audio file first"
+                    : alreadyTranscribed
+                      ? "Already transcribed with these settings. Change the file, language or model to run it again."
+                      : undefined
+              }
               className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
-              {isTranscribing ? "Transcribing..." : "Transcribe"}
+              {isTranscribing
+                ? "Transcribing..."
+                : alreadyTranscribed
+                  ? "Transcribed"
+                  : "Transcribe"}
             </button>
           </div>
 
