@@ -11,6 +11,7 @@ Powered by [AssemblyAI](https://www.assemblyai.com/) -- supports files up to 5GB
 - **Large file support** -- tested with 250MB+ files; no client-side splitting needed
 - **In-browser recording** -- record audio directly using the MediaRecorder API
 - **Export options** -- download transcripts as Markdown (.md), plain text (.txt), or Word (.docx)
+- **Recording date** -- set the date of the meeting or recording once; it goes into the transcript header and the download file names (`transcript-2026-09-15.md`). Prefilled from the audio file's modified date, editable
 - **BYO API key** -- your AssemblyAI key stays in localStorage, never stored server-side
 
 ## Tech Stack
@@ -41,8 +42,9 @@ The app runs at `http://localhost:8788` (Wrangler proxies Vite).
 1. Enter your AssemblyAI API key (saved to localStorage)
 2. Select a language or leave on "Auto-detect"
 3. Upload an audio file (mp3, wav, m4a, mp4, flac, ogg, webm) or record one
-4. Click **Transcribe**
-5. Once complete, export the transcript in your preferred format
+4. Check the **Recording date** (prefilled from the file's modified date) and fix it if the meeting was on another day. Leave it empty to export without a date
+5. Click **Transcribe**
+6. Once complete, export the transcript in your preferred format
 
 ## Scripts
 
@@ -64,12 +66,15 @@ src/
     AudioRecorder.tsx        # Browser recording via MediaRecorder
     FileUploader.tsx         # Drag-and-drop file upload
     LanguageSelector.tsx     # Language dropdown (auto-detect + manual)
+    ModelSelector.tsx        # AssemblyAI speech model dropdown
+    RecordingDateInput.tsx   # Date of the meeting/recording (prefilled from the file)
     TranscriptDisplay.tsx    # Renders speaker-labeled transcript
     ExportButtons.tsx        # MD / TXT / DOCX download buttons
   lib/
     api.ts                   # Upload, transcribe, poll functions
     types.ts                 # TypeScript interfaces
     languages.ts             # Supported language list
+    recording-date.ts        # Recording date helpers (format, file name)
     export-markdown.ts       # Transcript to Markdown
     export-txt.ts            # Transcript to plain text
     export-docx.ts           # Transcript to .docx

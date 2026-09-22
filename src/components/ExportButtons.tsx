@@ -3,28 +3,31 @@ import type { Utterance } from "../lib/types";
 import { exportMarkdown } from "../lib/export-markdown";
 import { exportTxt } from "../lib/export-txt";
 import { exportDocx } from "../lib/export-docx";
+import { transcriptFileName } from "../lib/recording-date";
 
 interface Props {
   utterances: Utterance[];
   audioDuration: number | null;
+  /** ISO calendar date ("YYYY-MM-DD") of the recording, or "" when unset. */
+  recordingDate: string;
 }
 
-export function ExportButtons({ utterances, audioDuration }: Props) {
+export function ExportButtons({ utterances, audioDuration, recordingDate }: Props) {
   function downloadMarkdown() {
-    const content = exportMarkdown(utterances, audioDuration);
+    const content = exportMarkdown(utterances, audioDuration, recordingDate);
     const blob = new Blob([content], { type: "text/markdown;charset=utf-8" });
-    saveAs(blob, "transcript.md");
+    saveAs(blob, transcriptFileName("md", recordingDate));
   }
 
   function downloadTxt() {
-    const content = exportTxt(utterances, audioDuration);
+    const content = exportTxt(utterances, audioDuration, recordingDate);
     const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
-    saveAs(blob, "transcript.txt");
+    saveAs(blob, transcriptFileName("txt", recordingDate));
   }
 
   async function downloadDocx() {
-    const blob = await exportDocx(utterances, audioDuration);
-    saveAs(blob, "transcript.docx");
+    const blob = await exportDocx(utterances, audioDuration, recordingDate);
+    saveAs(blob, transcriptFileName("docx", recordingDate));
   }
 
   const btnClass =

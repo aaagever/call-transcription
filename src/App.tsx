@@ -4,10 +4,12 @@ import { LanguageSelector } from "./components/LanguageSelector";
 import { ModelSelector } from "./components/ModelSelector";
 import { FileUploader } from "./components/FileUploader";
 import { AudioRecorder } from "./components/AudioRecorder";
+import { RecordingDateInput } from "./components/RecordingDateInput";
 import { TranscriptDisplay } from "./components/TranscriptDisplay";
 import { ExportButtons } from "./components/ExportButtons";
 import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
+import { formatRecordingDate, toIsoDate } from "./lib/recording-date";
 import type { TranscriptResult, TranscriptionProvider, SpeechModel } from "./lib/types";
 
 function playTone(type: "success" | "error") {
@@ -42,6 +44,10 @@ function App() {
   const [language, setLanguage] = useState("auto");
   const [model, setModel] = useState<SpeechModel>("universal-3-5-pro");
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  // Date of the meeting/recording itself (not of the transcription), as "YYYY-MM-DD".
+  const [recordingDate, setRecordingDate] = useState("");
+  // True while recordingDate is the prefilled file date and the user has not edited it.
+  const [dateFromFile, setDateFromFile] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptResult | null>(null);
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
@@ -50,6 +56,19 @@ function App() {
   const handleKeyChange = useCallback((key: string) => {
     setApiKey(key);
   }, []);
+
+  // Prefill the recording date from the file's modified time. For a meeting
+  // recording that is usually the meeting day; the user can correct it.
+  const handleFileSelect = useCallback((file: File) => {
+    setAudioFile(file);
+    setRecordingDate(toIsoDate(file.lastModified));
+    setDateFromFile(true);
+  }, []);
+
+  function handleDateChange(isoDate: string) {
+    setRecordingDate(isoDate);
+    setDateFromFile(false);
+  }
 
   async function handleTranscribe() {
     if (!apiKey) {
@@ -102,6 +121,8 @@ function App() {
     }
   }
 
+  const recordingDateLabel = formatRecordingDate(recordingDate);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-2xl mx-auto px-4 py-8">
@@ -119,10 +140,17 @@ function App() {
 
           <div className="border-t border-gray-100 pt-4">
             <div className="flex items-center gap-3 mb-3">
-              <AudioRecorder onRecordingComplete={setAudioFile} />
+              <AudioRecorder onRecordingComplete={handleFileSelect} />
               <span className="text-sm text-gray-400">or</span>
             </div>
-            <FileUploader onFileSelect={setAudioFile} currentFile={audioFile} />
+            <FileUploader onFileSelect={handleFileSelect} currentFile={audioFile} />
+            <div className="mt-3">
+              <RecordingDateInput
+                value={recordingDate}
+                fromFile={dateFromFile}
+                onChange={handleDateChange}
+              />
+            </div>
           </div>
 
           <div className="border-t border-gray-100 pt-4">
@@ -171,12 +199,20 @@ function App() {
         {transcript?.utterances && transcript.utterances.length > 0 && (
           <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">
-                Transcript
-              </h2>
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">
+                  Transcript
+                </h2>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  {recordingDateLabel
+                    ? `Recording date: ${recordingDateLabel}`
+                    : "No recording date set. Set it above to include it in the downloads."}
+                </p>
+              </div>
               <ExportButtons
                 utterances={transcript.utterances}
                 audioDuration={transcript.audio_duration}
+                recordingDate={recordingDate}
               />
             </div>
             <TranscriptDisplay utterances={transcript.utterances} language={language} />

@@ -6,6 +6,7 @@ import {
   Packer,
 } from "docx";
 import type { Utterance } from "./types";
+import { formatRecordingDate } from "./recording-date";
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -24,31 +25,27 @@ function formatDuration(ms: number): string {
 
 export async function exportDocx(
   utterances: Utterance[],
-  audioDuration: number | null
+  audioDuration: number | null,
+  recordingDate: string
 ): Promise<Blob> {
-  const date = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const meta: TextRun[] = [];
+  if (audioDuration) {
+    meta.push(new TextRun({ text: "Duration: ", bold: true }));
+    meta.push(new TextRun({ text: formatDuration(audioDuration * 1000) }));
+  }
+  const date = formatRecordingDate(recordingDate);
+  if (date) {
+    if (meta.length > 0) meta.push(new TextRun({ text: "  |  " }));
+    meta.push(new TextRun({ text: "Date: ", bold: true }));
+    meta.push(new TextRun({ text: date }));
+  }
 
   const children: Paragraph[] = [
     new Paragraph({
       text: "Call Transcript",
       heading: HeadingLevel.HEADING_1,
     }),
-    new Paragraph({
-      children: [
-        ...(audioDuration
-          ? [
-              new TextRun({ text: "Duration: ", bold: true }),
-              new TextRun({ text: `${formatDuration(audioDuration * 1000)}  |  ` }),
-            ]
-          : []),
-        new TextRun({ text: "Date: ", bold: true }),
-        new TextRun({ text: date }),
-      ],
-    }),
+    ...(meta.length > 0 ? [new Paragraph({ children: meta })] : []),
     new Paragraph({ text: "" }),
   ];
 

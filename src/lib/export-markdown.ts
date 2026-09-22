@@ -1,4 +1,5 @@
 import type { Utterance } from "./types";
+import { formatRecordingDate } from "./recording-date";
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -17,19 +18,23 @@ function formatDuration(ms: number): string {
 
 export function exportMarkdown(
   utterances: Utterance[],
-  audioDuration: number | null
+  audioDuration: number | null,
+  recordingDate: string
 ): string {
-  const date = new Date().toLocaleDateString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  const meta: string[] = [];
+  if (audioDuration) {
+    meta.push(`**Duration:** ${formatDuration(audioDuration * 1000)}`);
+  }
+  const date = formatRecordingDate(recordingDate);
+  if (date) {
+    meta.push(`**Date:** ${date}`);
+  }
 
   let md = `# Call Transcript\n`;
-  if (audioDuration) {
-    md += `**Duration:** ${formatDuration(audioDuration * 1000)} | `;
+  if (meta.length > 0) {
+    md += `${meta.join(" | ")}\n`;
   }
-  md += `**Date:** ${date}\n\n---\n\n`;
+  md += `\n---\n\n`;
 
   for (const u of utterances) {
     md += `**Speaker ${u.speaker}** (${formatTime(u.start)} - ${formatTime(u.end)})\n`;
