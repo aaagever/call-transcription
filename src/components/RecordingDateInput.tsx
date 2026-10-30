@@ -4,43 +4,40 @@ interface Props {
   /** True while the value is the audio file's modified date and the user has not touched it. */
   fromFile: boolean;
   onChange: (isoDate: string) => void;
+  id?: string;
 }
 
-export function RecordingDateInput({ value, fromFile, onChange }: Props) {
+export function RecordingDateInput({ value, fromFile, onChange, id = "recording-date" }: Props) {
   let hint: string;
   if (!value) {
     hint = "Optional. Goes into the transcript header and the file name.";
   } else if (fromFile) {
-    hint = "Prefilled from the file's modified date. Check it matches the meeting.";
+    hint = "From the file's date. Check it matches the meeting.";
   } else {
     hint = "Goes into the transcript header and the file name.";
   }
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      <label
-        htmlFor="recording-date"
-        className="text-sm font-medium text-gray-700 whitespace-nowrap"
-      >
-        Recording date
-      </label>
-      <input
-        id="recording-date"
-        type="date"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white"
-      />
-      {value ? (
-        <button
-          type="button"
-          onClick={() => onChange("")}
-          className="text-xs text-gray-500 hover:text-gray-700 underline"
-        >
-          Clear
-        </button>
-      ) : null}
-      <span className="text-xs text-gray-400">{hint}</span>
+    <div>
+      <div className="field-focus flex items-center gap-2 h-11 pl-3 pr-2 rounded-xl bg-field border border-line transition-shadow">
+        <input
+          id={id}
+          type="date"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-ink"
+        />
+        {value ? (
+          <button
+            type="button"
+            onClick={() => onChange("")}
+            className="text-xs text-faint hover:text-ink px-1.5"
+          >
+            Clear
+          </button>
+        ) : null}
+      </div>
+      <p className="mt-1.5 text-xs text-faint">{hint}</p>
     </div>
   );
 }

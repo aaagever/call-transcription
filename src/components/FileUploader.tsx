@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { FileAudio, Pause, Play, Upload, X } from "lucide-react";
 
 const ACCEPTED_FORMATS = [
   ".mp3", ".mp4", ".m4a", ".wav", ".webm",
@@ -11,6 +12,20 @@ interface Props {
   currentFile: File | null;
   /** Length in seconds when currentFile was recorded in the app; null for uploads. */
   recordingSeconds: number | null;
+  /** The Record button, shown inside the empty drop area. */
+  recorder?: React.ReactNode;
+}
+
+// Decorative waveform bars, shaped from the file name so each file looks a
+// little different. Not the real audio: decoding a long file just for this
+// would cost seconds and memory.
+function waveBars(seed: string, count = 56): number[] {
+  let h = 0;
+  for (const c of seed) h = (h * 31 + c.charCodeAt(0)) | 0;
+  return Array.from({ length: count }, (_, i) => {
+    const v = Math.abs(Math.sin(i * 0.55 + h) * Math.cos(i * 0.21 + h / 7));
+    return 6 + Math.round(22 * v);
+  });
 }
 
 // Plays the recording back so the user can check the microphone caught them
@@ -79,13 +94,14 @@ function useAudioLength(file: File | null): number | null {
   return length && length.file === file ? length.seconds : null;
 }
 
-export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeconds }: Props) {
+export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeconds, recorder }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
   const isRecording = recordingSeconds !== null;
   const metadataLength = useAudioLength(isRecording ? null : currentFile);
   const length = isRecording ? recordingSeconds : metadataLength;
   const playback = usePlayback(isRecording ? currentFile : null);
+  const bars = useMemo(() => waveBars(currentFile?.name ?? ""), [currentFile]);
 
   function handleFile(file: File) {
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
@@ -124,12 +140,12 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
       title={currentFile ? "Click or drop another file to replace it" : undefined}
-      className={`border-2 rounded-lg cursor-pointer transition-colors ${
+      className={`group rounded-2xl border-[1.5px] cursor-pointer transition-colors ${
         dragOver
-          ? "border-dashed border-blue-500 bg-blue-50"
+          ? "border-dashed border-accent bg-[color-mix(in_srgb,var(--accent)_8%,var(--field))]"
           : currentFile
-            ? "border-solid border-blue-200 bg-blue-50/40 hover:border-blue-300"
-            : "border-dashed border-gray-300 hover:border-gray-400"
+            ? "border-solid border-line bg-field hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--line))]"
+            : "border-dashed border-line bg-[color-mix(in_srgb,var(--field)_60%,transparent)] hover:border-accent hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--field))]"
       }`}
     >
       <input
@@ -145,7 +161,7 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
         className="hidden"
       />
       {currentFile ? (
-        <div className="flex items-center gap-3 p-4 text-left">
+        <div className="flex items-center gap-3.5 p-4 text-left">
           {isRecording ? (
             <button
               type="button"
@@ -155,33 +171,24 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
               }}
               aria-label={playback.playing ? "Pause recording" : "Play recording"}
               title={playback.playing ? "Pause" : "Play it back"}
-              className="w-10 h-10 rounded-lg bg-blue-600 text-white grid place-items-center shrink-0 hover:bg-blue-700"
+              className="w-11 h-11 rounded-xl accent-gradient text-white grid place-items-center shrink-0 hover:brightness-110"
             >
               {playback.playing ? (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <rect x="6" y="5" width="4" height="14" rx="1" />
-                  <rect x="14" y="5" width="4" height="14" rx="1" />
-                </svg>
+                <Pause className="w-4 h-4" fill="currentColor" />
               ) : (
-                <svg viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 ml-0.5">
-                  <path d="M7 4.5v15a1 1 0 0 0 1.5.86l12.5-7.5a1 1 0 0 0 0-1.72L8.5 3.64A1 1 0 0 0 7 4.5z" />
-                </svg>
+                <Play className="w-4 h-4 ml-0.5" fill="currentColor" />
               )}
             </button>
           ) : (
-            <div className="w-10 h-10 rounded-lg bg-blue-600 text-white grid place-items-center shrink-0">
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="w-5 h-5">
-                <path d="M9 18V5l12-2v13" />
-                <circle cx="6" cy="18" r="3" />
-                <circle cx="18" cy="16" r="3" />
-              </svg>
+            <div className="w-11 h-11 rounded-xl accent-gradient text-white grid place-items-center shrink-0">
+              <FileAudio className="w-5 h-5" />
             </div>
           )}
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-medium text-gray-900 truncate">
+            <p className="text-sm font-semibold text-ink truncate">
               {isRecording ? "Your recording" : currentFile.name}
             </p>
-            <p className="text-xs text-gray-500 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               {formatSize(currentFile.size)}
               {length !== null && ` · ${formatLength(length)}`}
               {isRecording && (
@@ -191,13 +198,25 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
                   <button
                     type="button"
                     onClick={downloadFile}
-                    className="text-blue-600 hover:text-blue-800 underline"
+                    className="text-accent hover:underline"
                   >
                     Save recording
                   </button>
                 </>
               )}
             </p>
+            <div className="wave flex items-center gap-[2px] h-[30px] mt-2" aria-hidden="true">
+              {bars.map((h, i) => (
+                <i
+                  key={i}
+                  style={{
+                    height: h,
+                    animationDelay: `${(i % 9) * -0.13}s`,
+                    animationPlayState: playback.playing ? "running" : "paused",
+                  }}
+                />
+              ))}
+            </div>
           </div>
           <button
             type="button"
@@ -207,21 +226,28 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
             }}
             aria-label="Remove file"
             title="Remove file"
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-700 hover:bg-white"
+            className="self-start p-1.5 rounded-lg text-faint hover:text-ink hover:bg-chip"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="w-4 h-4">
-              <path d="M6 6l12 12M18 6L6 18" />
-            </svg>
+            <X className="w-4 h-4" />
           </button>
         </div>
       ) : (
-        <div className="p-8 text-center">
-          <p className="text-gray-600 text-sm">
-            Drop an audio file here or click to browse
+        <div className="p-7 text-center">
+          <div className="w-[46px] h-[46px] mx-auto mb-3 rounded-[14px] bg-chip grid place-items-center transition-transform group-hover:-translate-y-[3px]">
+            <Upload className="w-5 h-5 text-accent" />
+          </div>
+          <p className="text-sm font-semibold text-ink">Drop your recording here</p>
+          <p className="text-[12.5px] text-muted mt-1">
+            or click to browse · MP3, M4A, WAV, MP4, WebM, FLAC or OGG
           </p>
-          <p className="text-gray-400 text-xs mt-1">
-            MP3, MP4, M4A, WAV, WebM, FLAC, OGG
-          </p>
+          {recorder && (
+            <div
+              className="flex items-center justify-center gap-2.5 mt-4 text-xs text-faint"
+              onClick={(e) => e.stopPropagation()}
+            >
+              or {recorder}
+            </div>
+          )}
         </div>
       )}
     </div>

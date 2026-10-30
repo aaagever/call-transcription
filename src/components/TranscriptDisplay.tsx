@@ -1,13 +1,7 @@
 import type { Utterance } from "../lib/types";
 
-const SPEAKER_COLORS = [
-  "text-blue-700",
-  "text-emerald-700",
-  "text-purple-700",
-  "text-orange-700",
-  "text-pink-700",
-  "text-teal-700",
-];
+// Readable on both the light and the dark look.
+const SPEAKER_COLORS = ["#8b7cff", "#f59e0b", "#14b8a6", "#ec4899", "#0ea5e9", "#84cc16"];
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
@@ -44,21 +38,42 @@ export function TranscriptDisplay({ utterances }: Props) {
   }
 
   return (
-    <div className={`space-y-4 ${isRtl ? "text-right" : "text-left"}`} dir={isRtl ? "rtl" : undefined}>
-      {utterances.map((u, i) => (
-        <div key={i}>
-          <div className="flex items-baseline gap-2 mb-1">
-            <span className={`font-semibold text-sm ${getSpeakerColor(u.speaker)}`}>
-              Speaker {u.speaker}
-            </span>
-            {/* Times always read left to right, even inside a Hebrew transcript. */}
-            <span className="text-xs text-gray-400" dir="ltr">
-              {formatTime(u.start)} - {formatTime(u.end)}
-            </span>
-          </div>
-          <p className="text-gray-800 text-sm leading-relaxed">{u.text}</p>
-        </div>
-      ))}
+    <div>
+      <div className="flex flex-wrap gap-3.5 mb-2 text-[12.5px] text-muted">
+        {speakerIds.map((id) => (
+          <span key={id} className="inline-flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full" style={{ background: getSpeakerColor(id) }} />
+            Speaker {id}
+          </span>
+        ))}
+      </div>
+      <div className={isRtl ? "text-right" : "text-left"} dir={isRtl ? "rtl" : undefined}>
+        {utterances.map((u, i) => {
+          const color = getSpeakerColor(u.speaker);
+          return (
+            <div key={i} className="grid grid-cols-[34px_1fr] gap-3 px-2 py-3 rounded-xl transition-colors hover:bg-row">
+              <div
+                className="w-[30px] h-[30px] rounded-full grid place-items-center text-xs font-bold text-white"
+                style={{ background: color }}
+              >
+                {u.speaker}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-baseline gap-2 text-[12.5px] font-semibold" style={{ color }}>
+                  Speaker {u.speaker}
+                  {/* Times always read left to right, even inside a Hebrew transcript. */}
+                  <span className="font-medium text-faint tabular-nums" dir="ltr">
+                    {formatTime(u.start)} - {formatTime(u.end)}
+                  </span>
+                </div>
+                <p className={`mt-1 text-ink leading-[1.75] ${isRtl ? "font-hebrew text-[15px]" : "text-sm"}`}>
+                  {u.text}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }

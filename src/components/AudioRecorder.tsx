@@ -79,23 +79,25 @@ export function AudioRecorder({ onRecordingComplete }: Props) {
       {recording ? (
         <>
           <button
+            type="button"
             onClick={stopRecording}
-            className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+            className="inline-flex items-center gap-2 rounded-full pl-3 pr-4 py-1.5 bg-red-600 text-white hover:bg-red-700 transition-colors text-[13px] font-semibold"
           >
-            <span className="w-2 h-2 bg-white rounded-sm" />
-            Stop Recording
+            <span className="w-2.5 h-2.5 bg-white rounded-[3px]" />
+            Stop recording
           </button>
-          <div className="flex items-center gap-2 text-sm text-gray-600">
+          <span className="inline-flex items-center gap-2 text-[13px] text-muted tabular-nums">
             <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
             {formatDuration(duration)}
-          </div>
+          </span>
         </>
       ) : (
         <button
+          type="button"
           onClick={startRecording}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900 transition-colors text-sm font-medium"
+          className="inline-flex items-center gap-2 rounded-full pl-2.5 pr-3.5 py-1.5 bg-chip text-ink border border-line hover:border-[color-mix(in_srgb,var(--accent)_45%,var(--line))] transition-colors text-[13px] font-semibold"
         >
-          <span className="w-2 h-2 bg-red-500 rounded-full" />
+          <span className="w-2.5 h-2.5 bg-red-500 rounded-full shadow-[0_0_0_4px_rgba(239,68,68,0.15)]" />
           Record
         </button>
       )}

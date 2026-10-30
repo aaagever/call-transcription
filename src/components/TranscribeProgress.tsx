@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Check, LoaderCircle } from "lucide-react";
 import { formatElapsed } from "../lib/elapsed";
 
 interface Props {
@@ -35,21 +36,16 @@ export function TranscribeProgress({ status, startedAt }: Props) {
       <div className="flex items-center gap-2 text-sm">
         {STEPS.map((label, i) => (
           <div key={label} className="flex items-center gap-2">
-            {i > 0 && <span className={`h-px w-6 ${i <= step ? "bg-blue-400" : "bg-gray-200"}`} />}
+            {i > 0 && <span className={`h-px w-6 ${i <= step ? "bg-accent" : "bg-line"}`} />}
             <span
               className={`flex items-center gap-1.5 ${
-                i === step ? "text-blue-700 font-medium" : i < step ? "text-gray-500" : "text-gray-300"
+                i === step ? "text-accent font-semibold" : i < step ? "text-muted" : "text-faint"
               }`}
             >
               {i < step ? (
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" className="w-3.5 h-3.5">
-                  <path d="M5 12l5 5L20 7" />
-                </svg>
+                <Check className="w-3.5 h-3.5" strokeWidth={3} />
               ) : i === step ? (
-                <svg className="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                </svg>
+                <LoaderCircle className="w-3.5 h-3.5 animate-spin" strokeWidth={2.5} />
               ) : (
                 <span className="w-2 h-2 rounded-full bg-current" />
               )}
@@ -58,14 +54,17 @@ export function TranscribeProgress({ status, startedAt }: Props) {
             </span>
           </div>
         ))}
-        <span className="ml-auto tabular-nums text-gray-500">{formatElapsed(now - startedAt)}</span>
+        <span className="ml-auto tabular-nums text-muted">{formatElapsed(now - startedAt)}</span>
       </div>
-      {percent !== null && (
-        <div className="h-1 rounded-full bg-gray-100 overflow-hidden">
-          <div className="h-full bg-blue-500 transition-[width] duration-300" style={{ width: `${percent}%` }} />
-        </div>
-      )}
-      <p className="text-xs text-gray-500">{status}</p>
+      <div className="h-1 rounded-full bg-chip overflow-hidden">
+        <div
+          className="h-full rounded-full accent-gradient transition-[width] duration-500"
+          // Upload fills the first third by its own percentage; transcription
+          // has no percentage, so it holds at two thirds until done.
+          style={{ width: `${step === 0 ? Math.round((percent ?? 0) / 3) : 66}%` }}
+        />
+      </div>
+      <p className="text-xs text-muted">{status}</p>
     </div>
   );
 }

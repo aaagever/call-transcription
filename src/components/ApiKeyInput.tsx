@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { Check, Eye, EyeOff, Lock } from "lucide-react";
 import type { TranscriptionProvider } from "../lib/types";
 
 const STORAGE_KEYS: Record<TranscriptionProvider, string> = {
@@ -8,9 +9,9 @@ const STORAGE_KEYS: Record<TranscriptionProvider, string> = {
 };
 
 const LABELS: Record<TranscriptionProvider, string> = {
-  "assemblyai": "AssemblyAI API Key",
-  "soniox": "Soniox API Key",
-  "ivrit-ai": "RunPod API Key",
+  "assemblyai": "AssemblyAI key",
+  "soniox": "Soniox key",
+  "ivrit-ai": "RunPod key",
 };
 
 function readStoredKey(provider: TranscriptionProvider): string {
@@ -47,38 +48,49 @@ export function ApiKeyInput({ provider, onKeyChange }: Props) {
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <label className="text-sm font-medium text-gray-700 whitespace-nowrap">
+    <div className="field-focus flex items-center gap-2.5 h-11 pl-3 pr-1.5 rounded-xl bg-field border border-line transition-shadow">
+      <Lock className="w-4 h-4 text-faint shrink-0" strokeWidth={2} />
+      <label htmlFor="api-key" className="text-[13px] text-muted whitespace-nowrap">
         {LABELS[provider]}
       </label>
-      <div className="relative flex-1">
-        <input
-          type={visible ? "text" : "password"}
-          value={key}
-          onChange={(e) => setKey(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") handleSave();
-          }}
-          placeholder="Enter your API key"
-          className="w-full px-3 py-2 pr-14 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-        />
-        <button
-          type="button"
-          onClick={() => setVisible(!visible)}
-          className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-gray-500 hover:text-gray-700"
-        >
-          {visible ? "Hide" : "Show"}
-        </button>
-      </div>
+      <input
+        id="api-key"
+        type={visible ? "text" : "password"}
+        value={key}
+        onChange={(e) => setKey(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") handleSave();
+        }}
+        placeholder="Paste your API key"
+        className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-ink placeholder:text-faint"
+      />
       <button
         type="button"
-        onClick={handleSave}
-        disabled={!canSave}
-        title={isSaved ? "This key is saved. Edit it to save a different one." : undefined}
-        className="px-3 py-2 text-sm font-medium rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed bg-gray-800 text-white hover:bg-gray-900"
+        onClick={() => setVisible(!visible)}
+        aria-label={visible ? "Hide key" : "Show key"}
+        title={visible ? "Hide key" : "Show key"}
+        className="p-1.5 rounded-md text-faint hover:text-ink"
       >
-        {isSaved ? "Saved" : "Save"}
+        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
       </button>
+      {isSaved ? (
+        <span
+          title="This key is saved. Edit it to save a different one."
+          className="inline-flex items-center gap-1 px-2 text-xs font-semibold text-ok whitespace-nowrap"
+        >
+          <Check className="w-3.5 h-3.5" strokeWidth={2.6} />
+          Saved
+        </span>
+      ) : (
+        <button
+          type="button"
+          onClick={handleSave}
+          disabled={!canSave}
+          className="h-8 px-3 text-xs font-semibold rounded-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed accent-gradient text-white"
+        >
+          Save
+        </button>
+      )}
     </div>
   );
 }

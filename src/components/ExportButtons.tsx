@@ -1,4 +1,5 @@
 import { saveAs } from "file-saver";
+import { Download } from "lucide-react";
 import type { Utterance } from "../lib/types";
 import { exportMarkdown } from "../lib/export-markdown";
 import { exportTxt } from "../lib/export-txt";
@@ -38,19 +39,19 @@ export function ExportButtons({
   }
 
   const btnClass =
-    "px-3 py-1.5 text-sm font-medium border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors";
+    "px-3 py-1.5 text-[12.5px] font-semibold rounded-[10px] bg-chip text-ink border border-line hover:border-accent transition-colors";
 
   return (
-    <div className="flex items-center gap-2">
-      <span className="text-sm text-gray-600">Download:</span>
-      <button onClick={downloadMarkdown} className={btnClass}>
+    <div className="flex items-center gap-1.5">
+      <Download className="w-4 h-4 text-faint mr-0.5" aria-label="Download" />
+      <button type="button" onClick={downloadMarkdown} className={btnClass}>
         Markdown
       </button>
-      <button onClick={downloadTxt} className={btnClass}>
+      <button type="button" onClick={downloadTxt} className={btnClass}>
         Text
       </button>
-      <button onClick={downloadDocx} className={btnClass}>
-        DOCX
+      <button type="button" onClick={downloadDocx} className={btnClass}>
+        Word
       </button>
     </div>
   );

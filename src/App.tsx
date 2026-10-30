@@ -7,6 +7,9 @@ import { AudioRecorder } from "./components/AudioRecorder";
 import { RecordingDateInput } from "./components/RecordingDateInput";
 import { TranscriptDisplay } from "./components/TranscriptDisplay";
 import { ExportButtons } from "./components/ExportButtons";
+import { SectionLabel } from "./components/SectionLabel";
+import { ThemeToggle } from "./components/ThemeToggle";
+import { AudioLines, CalendarDays, Globe, MessageSquareText, Sparkles } from "lucide-react";
 import { TranscribeProgress } from "./components/TranscribeProgress";
 import { formatElapsed } from "./lib/elapsed";
 import { transcribeAudio } from "./lib/api";
@@ -15,6 +18,20 @@ import { transcribeWithSoniox } from "./lib/soniox-api";
 import { formatRecordingDate, toIsoDate } from "./lib/recording-date";
 import { MODEL_PROVIDER } from "./lib/types";
 import type { TranscriptResult, TranscriptionProvider, SpeechModel } from "./lib/types";
+
+const MODEL_NAMES: Record<SpeechModel, string> = {
+  "soniox-stt-async-v5": "Soniox v5",
+  "universal-3-5-pro": "Universal-3.5 Pro",
+  "universal-2": "Universal-2",
+};
+
+function formatDuration(seconds: number): string {
+  const s = Math.round(seconds);
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = (s % 60).toString().padStart(2, "0");
+  return h > 0 ? `${h}:${m.toString().padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+}
 
 const PROVIDER_NAMES: Record<TranscriptionProvider, string> = {
   "assemblyai": "AssemblyAI",
@@ -213,79 +230,98 @@ function App() {
   const recordingDateLabel = formatRecordingDate(recordingDate);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-2xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">
-          Call Transcription
-        </h1>
+    <div className="min-h-screen">
+      <div className="page-bg" aria-hidden="true">
+        <div className="blob b1" />
+        <div className="blob b2" />
+        <div className="blob b3" />
+      </div>
 
-        <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-6">
+      <div className="relative z-10 max-w-[720px] mx-auto px-5 pt-14 pb-20">
+        <header className="flex items-center gap-3 mb-7">
+          <div className="w-9 h-9 rounded-[10px] accent-gradient grid place-items-center shadow-[0_6px_20px_-6px_var(--accent)]">
+            <AudioLines className="w-[18px] h-[18px] text-white" strokeWidth={2.2} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-[22px] font-semibold tracking-tight text-ink whitespace-nowrap">Call Transcription</h1>
+            <p className="hidden sm:block text-[13px] text-muted mt-0.5">
+              Speaker-labeled transcripts, exported to Markdown, text or Word
+            </p>
+          </div>
+          <ThemeToggle />
+        </header>
+
+        <div className="glass-card rounded-[20px] p-6 divide-y divide-divider [&>*]:py-[22px] [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
           {/* The model decides the provider, so its key field sits right under it. */}
-          <div className="space-y-3">
+          <section className="space-y-2.5">
+            <SectionLabel icon={Sparkles}>Model</SectionLabel>
             <ModelSelector value={model} onChange={handleModelChange} />
             <ApiKeyInput key={provider} provider={provider} onKeyChange={handleKeyChange} />
-          </div>
+          </section>
 
-          <div className="border-t border-gray-100 pt-4">
-            <LanguageSelector value={language} onChange={setLanguage} />
-          </div>
-
-          <div className="border-t border-gray-100 pt-4">
-            <div className="flex items-center gap-3 mb-3">
-              <AudioRecorder onRecordingComplete={handleRecordingComplete} />
-              <span className="text-sm text-gray-400">or</span>
+          <section className="grid grid-cols-1 sm:grid-cols-2 gap-x-2.5 gap-y-4">
+            <div>
+              <SectionLabel icon={Globe} htmlFor="language">Language</SectionLabel>
+              <LanguageSelector id="language" value={language} onChange={setLanguage} />
             </div>
-            <FileUploader
-              onFileSelect={handleFileSelect}
-              onClear={handleFileClear}
-              currentFile={audioFile}
-              recordingSeconds={recordingSeconds}
-            />
-            <div className="mt-3">
+            <div>
+              <SectionLabel icon={CalendarDays} htmlFor="recording-date">Recording date</SectionLabel>
               <RecordingDateInput
+                id="recording-date"
                 value={recordingDate}
                 fromFile={dateFromFile}
                 onChange={handleDateChange}
               />
             </div>
-          </div>
+          </section>
 
-          <div className="border-t border-gray-100 pt-4">
+          <section>
+            <SectionLabel icon={AudioLines}>Audio</SectionLabel>
+            <FileUploader
+              onFileSelect={handleFileSelect}
+              onClear={handleFileClear}
+              currentFile={audioFile}
+              recordingSeconds={recordingSeconds}
+              recorder={<AudioRecorder onRecordingComplete={handleRecordingComplete} />}
+            />
+          </section>
+
+          <section className="space-y-3">
             <button
+              type="button"
               onClick={handleTranscribe}
               disabled={isTranscribing || !audioFile || disabledReason !== null}
-              className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
+              className={`go-button w-full h-[52px] rounded-[14px] text-white text-[15px] font-semibold tracking-tight ${
+                isTranscribing ? "busy" : ""
+              }`}
             >
               {isTranscribing
-                ? "Transcribing..."
+                ? "Transcribing…"
                 : alreadyTranscribed
                   ? "Transcribed"
                   : "Transcribe"}
             </button>
             {disabledReason && (
-              <p className="mt-2 text-xs text-gray-500 text-center">{disabledReason}</p>
+              <p className="text-xs text-muted text-center">{disabledReason}</p>
             )}
-          </div>
-
-          {isTranscribing && startedAt !== null && (
-            <TranscribeProgress status={status} startedAt={startedAt} />
-          )}
-
-          {error && (
-            <p className="text-sm text-red-600 bg-red-50 rounded-lg px-3 py-2">
-              {error}
-            </p>
-          )}
+            {isTranscribing && startedAt !== null && (
+              <TranscribeProgress status={status} startedAt={startedAt} />
+            )}
+            {error && (
+              <p className="text-sm text-danger bg-danger-bg rounded-xl px-3.5 py-2.5">{error}</p>
+            )}
+          </section>
         </div>
 
         {transcript?.utterances && transcript.utterances.length > 0 && (
-          <div className="mt-6 bg-white rounded-xl border border-gray-200 p-6">
-            <div className="flex items-center justify-between mb-4">
+          <div className="glass-card rise rounded-[20px] p-6 mt-5">
+            <div className="flex items-start justify-between gap-3 flex-wrap mb-3.5">
               <div>
-                <h2 className="text-lg font-semibold text-gray-900">
+                <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
+                  <MessageSquareText className="w-4 h-4 text-accent" />
                   Transcript
                 </h2>
-                <p className="text-xs text-gray-400 mt-0.5">
+                <p className="text-xs text-faint mt-1">
                   {recordingDateLabel
                     ? `Recording date: ${recordingDateLabel}`
                     : "No recording date set. Set it above to include it in the downloads."}
@@ -297,6 +333,27 @@ function App() {
                 recordingDate={recordingDate}
                 sourceFileName={lastRun?.file.name ?? ""}
               />
+            </div>
+            <div className="flex flex-wrap gap-2 mb-3.5">
+              {transcript.audio_duration !== null && (
+                <span className="text-xs text-muted bg-chip px-2.5 py-1 rounded-full tabular-nums">
+                  {formatDuration(transcript.audio_duration)}
+                </span>
+              )}
+              <span className="text-xs text-muted bg-chip px-2.5 py-1 rounded-full">
+                {new Set(transcript.utterances.map((u) => u.speaker)).size} speakers
+              </span>
+              <span className="text-xs text-muted bg-chip px-2.5 py-1 rounded-full">
+                {transcript.utterances
+                  .reduce((n, u) => n + u.text.split(/\s+/).filter(Boolean).length, 0)
+                  .toLocaleString("en-US")}{" "}
+                words
+              </span>
+              {lastRun && (
+                <span className="text-xs text-muted bg-chip px-2.5 py-1 rounded-full">
+                  {MODEL_NAMES[lastRun.model]}
+                </span>
+              )}
             </div>
             <TranscriptDisplay utterances={transcript.utterances} />
           </div>

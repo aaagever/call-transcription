@@ -1,7 +1,178 @@
 @import "tailwindcss";
 
+/* Two looks, switched by data-look on <html> (set before paint in index.html,
+   then by the theme switch). Components use the colors below as Tailwind
+   utilities: bg-card, text-ink, border-line, text-accent and so on. */
+@theme inline {
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+  --font-hebrew: "Heebo", "Inter", system-ui, sans-serif;
+
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-card: var(--card);
+  --color-card-line: var(--card-line);
+  --color-field: var(--field);
+  --color-line: var(--line);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-chip: var(--chip);
+  --color-ok: var(--ok);
+  --color-danger: var(--danger);
+  --color-danger-bg: var(--danger-bg);
+  --color-divider: var(--divider);
+  --color-row: var(--row);
+}
+
+:root[data-look="dark"] {
+  color-scheme: dark;
+  --page: #06070b;
+  --ink: #eef0f6;
+  --muted: #8a90a2;
+  --faint: #5f6577;
+  --card: rgba(255, 255, 255, 0.045);
+  --card-line: rgba(255, 255, 255, 0.09);
+  --field: rgba(255, 255, 255, 0.05);
+  --line: rgba(255, 255, 255, 0.1);
+  --accent: #8b7cff;
+  --accent-2: #36d6c3;
+  --chip: rgba(255, 255, 255, 0.07);
+  --ok: #4ade80;
+  --danger: #fca5a5;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --divider: rgba(255, 255, 255, 0.07);
+  --row: rgba(255, 255, 255, 0.03);
+  --shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+:root[data-look="light"] {
+  color-scheme: light;
+  --page: #f6f7fb;
+  --ink: #12141c;
+  --muted: #5e6475;
+  --faint: #9aa0af;
+  --card: #ffffff;
+  --card-line: #e7e9f0;
+  --field: #ffffff;
+  --line: #e2e5ee;
+  --accent: #5b4cf0;
+  --accent-2: #12a594;
+  --chip: #f1f2f7;
+  --ok: #16a34a;
+  --danger: #b91c1c;
+  --danger-bg: #fef2f2;
+  --divider: #eef0f5;
+  --row: #fafbfd;
+  --shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 32px -12px rgba(16, 24, 40, 0.12);
+}
+
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
+  background: var(--page);
+  color: var(--ink);
   -webkit-font-smoothing: antialiased;
+  transition: background-color 0.4s, color 0.4s;
+}
+
+/* Native <select> menus and date pickers stay readable in both looks. */
+select option {
+  color: #111;
+}
+
+/* ---------- background ---------- */
+.page-bg {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 0;
+}
+.page-bg .blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(90px);
+  mix-blend-mode: screen;
+  animation: drift 22s ease-in-out infinite alternate;
+}
+.page-bg .b1 { width: 60vmax; height: 60vmax; background: #6d5cff; top: -25vmax; left: -15vmax; opacity: 0.38; }
+.page-bg .b2 { width: 60vmax; height: 60vmax; background: #13c4b0; bottom: -30vmax; right: -20vmax; opacity: 0.28; animation-delay: -7s; }
+.page-bg .b3 { width: 45vmax; height: 45vmax; background: #c04cff; top: 20vh; right: -30vmax; opacity: 0.18; animation-delay: -13s; }
+@keyframes drift {
+  0% { transform: translate(0, 0) scale(1); }
+  50% { transform: translate(6vmax, 4vmax) scale(1.08); }
+  100% { transform: translate(-4vmax, 7vmax) scale(0.95); }
+}
+:root[data-look="dark"] .page-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1px, transparent 1px);
+  background-size: 22px 22px;
+  mask-image: radial-gradient(ellipse at center, black 30%, transparent 75%);
+}
+:root[data-look="light"] .page-bg .blob { display: none; }
+:root[data-look="light"] .page-bg {
+  background-image: radial-gradient(#d9dce6 1px, transparent 1px);
+  background-size: 20px 20px;
+  mask-image: radial-gradient(ellipse at 50% 0%, black 40%, transparent 85%);
+}
+
+/* ---------- surfaces ---------- */
+.glass-card {
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+}
+.field-focus:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+.accent-gradient {
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+}
+
+/* ---------- Transcribe button ---------- */
+.go-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 50%, var(--accent-2)), var(--accent-2));
+  box-shadow: 0 12px 30px -12px var(--accent);
+  transition: transform 0.15s, filter 0.2s, opacity 0.2s;
+}
+.go-button:not(:disabled):hover { transform: translateY(-1px); filter: brightness(1.06); }
+.go-button:disabled { cursor: not-allowed; filter: saturate(0.4) brightness(0.85); }
+:root[data-look="light"] .go-button:disabled { filter: saturate(0.6); opacity: 0.45; box-shadow: none; }
+.go-button::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 40%;
+  left: -60%;
+  background: linear-gradient(100deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+  transform: skewX(-20deg);
+}
+.go-button.busy::after { animation: shine 1.4s ease-in-out infinite; }
+@keyframes shine { to { left: 130%; } }
+
+/* ---------- audio waveform in the file card ---------- */
+.wave i {
+  display: block;
+  width: 3px;
+  border-radius: 2px;
+  background: linear-gradient(var(--accent), var(--accent-2));
+  opacity: 0.85;
+  animation: bar 1.2s ease-in-out infinite;
+}
+@keyframes bar { 0%, 100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
+
+.rise { animation: rise 0.5s ease both; }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::after { animation: none !important; transition: none !important; }
 }

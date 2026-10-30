@@ -14,10 +14,11 @@ Powered by [Soniox](https://soniox.com/) (the default, best for Hebrew) or [Asse
 - **Recording date** -- set the date of the meeting or recording once; it goes into the transcript header and the download file names, which keep the audio file's own name (`client-call-transcript-2026-09-15.md`). Prefilled from the audio file's modified date, editable
 - **Two providers** -- Soniox v5, AssemblyAI Universal-3.5 Pro or Universal-2, picked from one Model dropdown. The app remembers the last model used
 - **BYO API keys** -- one key per provider, kept in localStorage, never stored server-side
+- **Light and dark mode** -- follows the system setting by default; the sun / screen / moon switch in the header picks one and remembers it
 
 ## Tech Stack
 
-- **Vite + React + TypeScript + Tailwind CSS** -- lightweight SPA, no SSR
+- **Vite + React + TypeScript + Tailwind CSS** -- lightweight SPA, no SSR. Both looks are CSS variables in `src/index.css`, switched by `data-look` on `<html>`; icons from `lucide-react`
 - **Cloudflare Pages Functions** -- CORS proxy to AssemblyAI, which sends no CORS headers
 - **AssemblyAI API** -- transcription with Universal-3.5 Pro + Universal-2 fallback
 - **Soniox API** -- `stt-async-v5`, called directly from the browser (Soniox sends CORS headers; checked 2026-10-29)
