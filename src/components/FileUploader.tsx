@@ -169,7 +169,13 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
         if (dragDepth.current === 0) setDragOver(false);
       }}
       onDrop={handleDrop}
-      onClick={() => inputRef.current?.click()}
+      onClick={(e) => {
+        // input.click() fires a click on the input that bubbles back up to
+        // here; reacting to it asked for the picker again and again, and
+        // the extra requests could stop the picker from opening at all.
+        if (e.target === inputRef.current) return;
+        inputRef.current?.click();
+      }}
       onKeyDown={(e) => {
         if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
           e.preventDefault();

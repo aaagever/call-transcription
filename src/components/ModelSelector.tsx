@@ -36,7 +36,7 @@ export function ModelSelector({ value, onChange }: Props) {
               role="radio"
               aria-checked={selected}
               onClick={() => onChange(m.value)}
-              className={`relative text-left rounded-[14px] px-3.5 pt-3.5 pb-3 border transition-all hover:-translate-y-px ${
+              className={`relative text-left rounded-[14px] px-3.5 pt-3.5 pb-3 border transition-all active:brightness-95 ${
                 selected
                   ? "border-transparent bg-[color-mix(in_srgb,var(--accent)_12%,var(--field))] shadow-[0_0_0_1.5px_var(--accent),0_10px_30px_-14px_var(--accent)]"
                   : "bg-field border-line hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--line))]"
