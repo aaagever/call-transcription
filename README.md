@@ -4,6 +4,8 @@ A browser-based tool for transcribing audio files with speaker diarization. Uplo
 
 Powered by [Soniox](https://soniox.com/) (the default, best for Hebrew) or [AssemblyAI](https://www.assemblyai.com/), chosen in the Model dropdown. No chunking or splitting required.
 
+Design system and the guide for bringing it to the sibling t2s app: [DESIGN.md](DESIGN.md). Working notes: [CLAUDE.md](CLAUDE.md).
+
 ## Features
 
 - **Speaker diarization** -- automatically labels who said what (Speaker A, Speaker B, etc.)
@@ -63,19 +65,27 @@ The app runs at `http://localhost:8788` (Wrangler proxies Vite).
 
 ```
 src/
-  App.tsx                    # Main app -- state management, UI composition
+  App.tsx                    # Main app -- state management, layout
+  index.css                  # Light/dark color tokens and every custom style
+  assets/illos-uploads.svg   # Illos drawing (Illos free license, note inside)
   components/
-    ApiKeyInput.tsx          # API key field with localStorage persistence
+    ApiKeyInput.tsx          # Masked key field (not type=password, so password managers skip it)
     AudioRecorder.tsx        # Browser recording via MediaRecorder
-    FileUploader.tsx         # Drag-and-drop file upload
+    FileUploader.tsx         # Drop zone: halo frame, Illos drawing, file card with waveform
+    HaloFrame.tsx            # Glowing frame around the drop zone
+    IllosArt.tsx             # The animated Illos drawing, looping while on screen
     LanguageSelector.tsx     # Language dropdown (auto-detect + manual)
-    ModelSelector.tsx        # Model dropdown (Soniox and AssemblyAI); the model sets the provider
+    ModelSelector.tsx        # Model cards; a card deck on phones; the model sets the provider
     RecordingDateInput.tsx   # Date of the meeting/recording (prefilled from the file)
-    TranscriptDisplay.tsx    # Renders speaker-labeled transcript
+    SectionLabel.tsx         # Section heading with an icon
+    ThemeToggle.tsx          # Light / system / dark switch
+    TranscribeProgress.tsx   # Steps, timer and progress bar while running
+    TranscriptDisplay.tsx    # Speaker-labeled transcript; direction read from the text
     ExportButtons.tsx        # MD / TXT / DOCX download buttons
   lib/
     api.ts                   # AssemblyAI upload, transcribe, poll; shared error helpers
     soniox-api.ts            # Soniox: upload, transcribe, poll, tokens to utterances, cleanup
+    elapsed.ts               # Run-time formatting
     types.ts                 # TypeScript interfaces
     languages.ts             # Supported language list
     recording-date.ts        # Recording date helpers (format, file name)
