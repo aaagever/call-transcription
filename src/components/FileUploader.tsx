@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Music, Pause, Play, Upload, X } from "lucide-react";
+import { Music, Pause, Play, X } from "lucide-react";
+import { HaloFrame } from "./HaloFrame";
+import { IllosArt } from "./IllosArt";
 
 const ACCEPTED_FORMATS = [
   ".mp3", ".mp4", ".m4a", ".wav", ".webm",
@@ -112,6 +114,8 @@ function useBarCount(el: HTMLElement | null): number {
 export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeconds, recorder }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
   const isRecording = recordingSeconds !== null;
   const metadataLength = useAudioLength(isRecording ? null : currentFile);
   const length = isRecording ? recordingSeconds : metadataLength;
@@ -129,8 +133,13 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
     onFileSelect(file);
   }
 
+  // Drag events also fire for every element inside the zone, so count them
+  // and only call the drag over when the pointer has left the zone itself.
+  const dragDepth = useRef(0);
+
   function handleDrop(e: React.DragEvent) {
     e.preventDefault();
+    dragDepth.current = 0;
     setDragOver(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
@@ -149,22 +158,35 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
 
   return (
     <div
-      onDragOver={(e) => {
+      onDragEnter={(e) => {
         e.preventDefault();
+        dragDepth.current += 1;
         setDragOver(true);
       }}
-      onDragLeave={() => setDragOver(false)}
+      onDragOver={(e) => e.preventDefault()}
+      onDragLeave={() => {
+        dragDepth.current = Math.max(0, dragDepth.current - 1);
+        if (dragDepth.current === 0) setDragOver(false);
+      }}
       onDrop={handleDrop}
       onClick={() => inputRef.current?.click()}
+      onKeyDown={(e) => {
+        if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          inputRef.current?.click();
+        }
+      }}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={() => setFocused(false)}
+      tabIndex={0}
+      role="button"
+      aria-label={currentFile ? `Selected: ${currentFile.name}. Choose another file` : "Choose an audio file"}
       title={currentFile ? "Click or drop another file to replace it" : undefined}
-      className={`group rounded-2xl border-[1.5px] cursor-pointer transition-colors ${
-        dragOver
-          ? "border-dashed border-accent bg-[color-mix(in_srgb,var(--accent)_8%,var(--field))]"
-          : currentFile
-            ? "border-solid border-line bg-field hover:border-[color-mix(in_srgb,var(--accent)_40%,var(--line))]"
-            : "border-dashed border-line bg-[color-mix(in_srgb,var(--field)_60%,transparent)] hover:border-accent hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--field))]"
-      }`}
+      className="group block rounded-2xl cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent)_45%,transparent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--page)]"
     >
+      <HaloFrame active={dragOver || hovered || focused}>
       <input
         ref={inputRef}
         type="file"
@@ -252,10 +274,8 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
           </button>
         </div>
       ) : (
-        <div className="p-[26px] text-center">
-          <div className="w-[46px] h-[46px] mx-auto mb-3 rounded-[14px] bg-chip grid place-items-center transition-transform group-hover:-translate-y-[3px]">
-            <Upload className="w-5 h-5 text-accent" />
-          </div>
+        <div className="px-6 pt-5 pb-6 text-center">
+          <IllosArt className="illos-art w-full max-w-[300px] mx-auto mb-3" />
           <p className="text-sm leading-tight font-semibold text-ink">Drop your recording here</p>
           <p className="text-[12.5px] leading-tight text-muted mt-1">
             MP3, M4A, WAV, MP4, WebM, FLAC or OGG
@@ -270,6 +290,7 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
           )}
         </div>
       )}
+      </HaloFrame>
     </div>
   );
 }

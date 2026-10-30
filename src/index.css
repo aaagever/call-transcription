@@ -170,6 +170,90 @@ select option {
 }
 @keyframes bar { 0%, 100% { transform: scaleY(0.45); } 50% { transform: scaleY(1); } }
 
+/* ---------- drop zone: halo frame ----------
+   After the Halo Dropzone by cult/ui on 21st.dev (MIT): colored blobs drift
+   along the bottom behind a frosted surface and glow through its 1px rim; on
+   hover, focus or drag a light trail circles the border. Rebuilt in plain CSS
+   (the original uses the motion library) and recolored to this app. */
+:root[data-look="dark"] { --halo-fill: rgba(11, 12, 18, 0.6); --halo-fill-active: rgba(11, 12, 18, 0.5); --illos-ground-app: #101117; }
+:root[data-look="light"] { --halo-fill: rgba(255, 255, 255, 0.78); --halo-fill-active: rgba(255, 255, 255, 0.7); --illos-ground-app: #ffffff; }
+
+.halo { position: relative; border-radius: 16px; padding: 1px; }
+.halo-blobs { position: absolute; inset: 0; overflow: hidden; border-radius: 16px; pointer-events: none; }
+.halo-blobs > div {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 58%;
+  opacity: 0.72; transition: opacity 0.25s ease-out;
+}
+.halo.active .halo-blobs > div { opacity: 0.95; }
+.halo-blobs i { position: absolute; display: block; border-radius: 9999px; }
+.halo-blobs .p {
+  bottom: -40px; height: 128px; width: 352px; filter: blur(40px);
+  background: linear-gradient(90deg, #c04cff, var(--accent), var(--accent-2), #5b4cf0);
+  animation: halo-p 6s ease-in-out infinite;
+}
+.halo-blobs .s {
+  bottom: -28px; height: 96px; width: 208px; filter: blur(40px);
+  background: linear-gradient(90deg, #ec4899, #8b7cff, #c04cff);
+  animation: halo-s 5s ease-in-out infinite;
+}
+.halo-blobs .t {
+  bottom: -20px; height: 80px; width: 176px; filter: blur(24px);
+  background: linear-gradient(90deg, var(--accent-2), #36d6c3, var(--accent));
+  animation: halo-t 4s ease-in-out infinite;
+}
+@keyframes halo-p { 0%, 100% { left: -5%; } 50% { left: 75%; } }
+@keyframes halo-s { 0%, 100% { left: 65%; } 50% { left: 10%; } }
+@keyframes halo-t { 0%, 100% { left: 25%; } 50% { left: 55%; } }
+
+.halo-surface {
+  position: relative; z-index: 1; border-radius: 15px;
+  border: 1px solid var(--line);
+  background: var(--halo-fill);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  transition: background-color 0.2s ease-out, border-color 0.2s ease-out;
+}
+.halo.active .halo-surface { background: var(--halo-fill-active); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); }
+
+/* The trail shows only on the border: the mask keeps the 1px border box. */
+.halo-trail {
+  position: absolute; inset: 0; z-index: 2; border-radius: 16px; pointer-events: none;
+  border: 1px solid transparent;
+  mask-image: linear-gradient(transparent, transparent), linear-gradient(#000, #000);
+  mask-clip: padding-box, border-box;
+  mask-composite: intersect;
+  -webkit-mask-image: linear-gradient(transparent, transparent), linear-gradient(#000, #000);
+  -webkit-mask-clip: padding-box, border-box;
+  -webkit-mask-composite: source-in;
+  opacity: 0; transition: opacity 0.3s ease-out;
+}
+.halo.active .halo-trail { opacity: 1; }
+.halo-trail i {
+  position: absolute; display: block; width: 184px; height: 32px; border-radius: 9999px;
+  offset-path: rect(0 auto auto 0 round 16px);
+  animation: halo-trail 5.25s linear infinite;
+}
+.halo-trail .ambient {
+  filter: blur(12px); opacity: 0.95;
+  background: linear-gradient(90deg, transparent 0%, rgba(192, 76, 255, 0) 6%, rgba(192, 76, 255, 0.38) 24%, rgba(139, 124, 255, 0.5) 50%, rgba(54, 214, 195, 0.42) 76%, rgba(54, 214, 195, 0) 94%, transparent 100%);
+  box-shadow: 0 0 22px rgba(139, 124, 255, 0.28), 0 0 44px rgba(54, 214, 195, 0.18);
+}
+.halo-trail .core {
+  filter: blur(4px);
+  background: linear-gradient(90deg, transparent 0%, rgba(192, 76, 255, 0.72) 20%, rgba(200, 180, 255, 0.92) 50%, rgba(54, 214, 195, 0.78) 80%, transparent 100%);
+  box-shadow: 0 0 14px rgba(192, 76, 255, 0.35), 0 0 28px rgba(54, 214, 195, 0.32);
+}
+@keyframes halo-trail { from { offset-distance: 0%; } to { offset-distance: 100%; } }
+
+/* The Illos drawing takes its colors from the app. */
+.illos-art {
+  --illos-ground: var(--illos-ground-app);
+  --illos-ink: var(--ink);
+  --illos-accent: var(--accent-2);
+}
+:root[data-look="dark"] .illos-art { --illos-dark: 1; }
+:root[data-look="light"] .illos-art { --illos-dark: 0; }
+
 .rise { animation: rise 0.5s ease both; }
 @keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
