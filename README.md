@@ -2,7 +2,7 @@
 
 A browser-based tool for transcribing audio files with speaker diarization. Upload a recording (or record one in-browser), get a speaker-labeled transcript, and export it as Markdown, plain text, or DOCX.
 
-Powered by [AssemblyAI](https://www.assemblyai.com/) -- supports files up to 5GB with no chunking or splitting required.
+Powered by [Soniox](https://soniox.com/) (the default, best for Hebrew) or [AssemblyAI](https://www.assemblyai.com/), chosen in the Model dropdown. No chunking or splitting required.
 
 ## Features
 
@@ -12,18 +12,20 @@ Powered by [AssemblyAI](https://www.assemblyai.com/) -- supports files up to 5GB
 - **In-browser recording** -- record audio directly using the MediaRecorder API
 - **Export options** -- download transcripts as Markdown (.md), plain text (.txt), or Word (.docx)
 - **Recording date** -- set the date of the meeting or recording once; it goes into the transcript header and the download file names, which keep the audio file's own name (`client-call-transcript-2026-09-15.md`). Prefilled from the audio file's modified date, editable
-- **BYO API key** -- your AssemblyAI key stays in localStorage, never stored server-side
+- **Two providers** -- Soniox v5, AssemblyAI Universal-3.5 Pro or Universal-2, picked from one Model dropdown. The app remembers the last model used
+- **BYO API keys** -- one key per provider, kept in localStorage, never stored server-side
 
 ## Tech Stack
 
 - **Vite + React + TypeScript + Tailwind CSS** -- lightweight SPA, no SSR
-- **Cloudflare Pages Functions** -- CORS proxy to AssemblyAI (keeps the API key out of browser requests)
-- **AssemblyAI API** -- transcription with Universal-3-Pro + Universal-2 fallback
+- **Cloudflare Pages Functions** -- CORS proxy to AssemblyAI, which sends no CORS headers
+- **AssemblyAI API** -- transcription with Universal-3.5 Pro + Universal-2 fallback
+- **Soniox API** -- `stt-async-v5`, called directly from the browser (Soniox sends CORS headers; checked 2026-10-29)
 
 ## Prerequisites
 
 - Node.js 20+
-- An [AssemblyAI API key](https://www.assemblyai.com/dashboard/signup) (free tier available)
+- A [Soniox API key](https://console.soniox.com/) (pay as you go, about $0.10 per audio hour) and/or an [AssemblyAI API key](https://www.assemblyai.com/dashboard/signup) (free tier available)
 
 ## Setup
 
@@ -39,8 +41,8 @@ The app runs at `http://localhost:8788` (Wrangler proxies Vite).
 
 ## Usage
 
-1. Enter your AssemblyAI API key (saved to localStorage)
-2. Select a language or leave on "Auto-detect"
+1. Pick a model, then enter that provider's API key (saved to localStorage)
+2. Select a language or leave on "Auto-detect". For Soniox the language is a hint, sent together with English
 3. Upload an audio file (mp3, wav, m4a, mp4, flac, ogg, webm) or record one
 4. Check the **Recording date** (prefilled from the file's modified date) and fix it if the meeting was on another day. Leave it empty to export without a date
 5. Click **Transcribe**
@@ -66,12 +68,13 @@ src/
     AudioRecorder.tsx        # Browser recording via MediaRecorder
     FileUploader.tsx         # Drag-and-drop file upload
     LanguageSelector.tsx     # Language dropdown (auto-detect + manual)
-    ModelSelector.tsx        # AssemblyAI speech model dropdown
+    ModelSelector.tsx        # Model dropdown (Soniox and AssemblyAI); the model sets the provider
     RecordingDateInput.tsx   # Date of the meeting/recording (prefilled from the file)
     TranscriptDisplay.tsx    # Renders speaker-labeled transcript
     ExportButtons.tsx        # MD / TXT / DOCX download buttons
   lib/
-    api.ts                   # Upload, transcribe, poll functions
+    api.ts                   # AssemblyAI upload, transcribe, poll; shared error helpers
+    soniox-api.ts            # Soniox: upload, transcribe, poll, tokens to utterances, cleanup
     types.ts                 # TypeScript interfaces
     languages.ts             # Supported language list
     recording-date.ts        # Recording date helpers (format, file name)
@@ -106,6 +109,20 @@ Browser                     Cloudflare Function          AssemblyAI
 ```
 
 The Cloudflare Function acts as a CORS proxy -- it receives the API key from the browser via a header and forwards it to AssemblyAI. The key is never stored server-side.
+
+Soniox needs no proxy, so the browser talks to it directly:
+
+```
+Browser                                Soniox
+-------                                ------
+1. Upload audio ---------------------> POST /v1/files
+2. Start transcription --------------> POST /v1/transcriptions (stt-async-v5, speaker diarization)
+3. Poll every 3s --------------------> GET /v1/transcriptions/:id
+4. Fetch the result -----------------> GET /v1/transcriptions/:id/transcript
+5. Delete the job and the file ------> DELETE (Soniox otherwise keeps them for 30 days)
+```
+
+Soniox caps a file at 300 minutes. It writes English terms in Latin letters and numbers as digits.
 
 ## Supported Audio Formats
 

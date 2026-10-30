@@ -9,8 +9,25 @@ import { TranscriptDisplay } from "./components/TranscriptDisplay";
 import { ExportButtons } from "./components/ExportButtons";
 import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
+import { transcribeWithSoniox } from "./lib/soniox-api";
 import { formatRecordingDate, toIsoDate } from "./lib/recording-date";
+import { MODEL_PROVIDER } from "./lib/types";
 import type { TranscriptResult, TranscriptionProvider, SpeechModel } from "./lib/types";
+
+const PROVIDER_NAMES: Record<TranscriptionProvider, string> = {
+  "assemblyai": "AssemblyAI",
+  "soniox": "Soniox",
+  "ivrit-ai": "RunPod",
+};
+
+// The model picked last is remembered in this browser; Soniox the first time.
+const MODEL_STORAGE_KEY = "transcription-model";
+const DEFAULT_MODEL: SpeechModel = "soniox-stt-async-v5";
+
+function readStoredModel(): SpeechModel {
+  const stored = localStorage.getItem(MODEL_STORAGE_KEY);
+  return stored && stored in MODEL_PROVIDER ? (stored as SpeechModel) : DEFAULT_MODEL;
+}
 
 // The inputs that define a transcription request. Changing any of them is
 // what re-enables the Transcribe button after a successful run.
@@ -48,10 +65,11 @@ function playTone(type: "success" | "error") {
 }
 
 function App() {
-  const provider: TranscriptionProvider = "assemblyai";
   const [apiKey, setApiKey] = useState("");
   const [language, setLanguage] = useState("auto");
-  const [model, setModel] = useState<SpeechModel>("universal-3-5-pro");
+  const [model, setModel] = useState<SpeechModel>(readStoredModel);
+  // The model decides the provider, and with it which API key is in use.
+  const provider = MODEL_PROVIDER[model];
   const [audioFile, setAudioFile] = useState<File | null>(null);
   // Date of the meeting/recording itself (not of the transcription), as "YYYY-MM-DD".
   const [recordingDate, setRecordingDate] = useState("");
@@ -70,6 +88,11 @@ function App() {
     setApiKey(key);
   }, []);
 
+  function handleModelChange(next: SpeechModel) {
+    setModel(next);
+    localStorage.setItem(MODEL_STORAGE_KEY, next);
+  }
+
   // Prefill the recording date from the file's modified time. For a meeting
   // recording that is usually the meeting day; the user can correct it.
   const handleFileSelect = useCallback((file: File) => {
@@ -85,11 +108,7 @@ function App() {
 
   async function handleTranscribe() {
     if (!apiKey) {
-      setError(
-        provider === "assemblyai"
-          ? "Please enter your AssemblyAI API key."
-          : "Please enter your RunPod API key."
-      );
+      setError(`Please enter your ${PROVIDER_NAMES[provider]} API key.`);
       return;
     }
     if (!audioFile) {
@@ -105,7 +124,14 @@ function App() {
       const langCode = language === "auto" ? undefined : language;
       let result: TranscriptResult;
 
-      if (provider === "ivrit-ai") {
+      if (model === "soniox-stt-async-v5") {
+        result = await transcribeWithSoniox(
+          audioFile,
+          apiKey,
+          langCode,
+          setStatus
+        );
+      } else if (provider === "ivrit-ai") {
         result = await transcribeWithIvrit(
           audioFile,
           apiKey,
@@ -156,7 +182,7 @@ function App() {
 
           <div className="border-t border-gray-100 pt-4 space-y-3">
             <LanguageSelector value={language} onChange={setLanguage} />
-            <ModelSelector value={model} onChange={setModel} />
+            <ModelSelector value={model} onChange={handleModelChange} />
           </div>
 
           <div className="border-t border-gray-100 pt-4">

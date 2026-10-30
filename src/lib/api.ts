@@ -1,4 +1,4 @@
-import type { TranscriptResult, UploadResponse, R2UploadResponse, SpeechModel } from "./types";
+import type { TranscriptResult, UploadResponse, R2UploadResponse, AssemblyAIModel } from "./types";
 
 const API_BASE = "/api";
 
@@ -8,7 +8,7 @@ const CHUNK_SIZE = 50 * 1024 * 1024; // 50MB per chunk
 // Maps the user-selected model to an AssemblyAI speech_models priority list.
 // speech_models is a priority order with automatic fallback: AssemblyAI uses
 // the first model that supports the audio's language, otherwise the next.
-const SPEECH_MODEL_PRIORITY: Record<SpeechModel, string[]> = {
+const SPEECH_MODEL_PRIORITY: Record<AssemblyAIModel, string[]> = {
   // Newest flagship (best English + Hebrew); Universal-2 covers anything it doesn't.
   "universal-3-5-pro": ["universal-3-5-pro", "universal-2"],
   // Broadest language coverage, lower cost.
@@ -20,7 +20,7 @@ const SPEECH_MODEL_PRIORITY: Record<SpeechModel, string[]> = {
 // user nothing. These helpers turn network-level failures and error
 // responses into clear, actionable messages tagged with the step that failed.
 
-type Step = "upload" | "create" | "part" | "complete" | "transcribe" | "poll";
+export type Step = "upload" | "create" | "part" | "complete" | "transcribe" | "poll";
 
 // Human phrase for each step, used inside "...while {label}." sentences.
 const STEP_LABEL: Record<Step, string> = {
@@ -38,12 +38,12 @@ const UPLOAD_STEPS: ReadonlySet<Step> = new Set(["upload", "create", "part", "co
 const MP3_TIP =
   " If this is a large recording, extract the audio to an MP3 (much smaller) and upload that instead.";
 
-function httpMessage(step: Step, status: number, body: string): string {
+function httpMessage(step: Step, status: number, body: string, provider: string): string {
   const label = STEP_LABEL[step];
   const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : " Please try again in a moment.";
 
   if (status === 401 || status === 403) {
-    return "Your AssemblyAI API key was rejected. Check the key and try again.";
+    return `Your ${provider} API key was rejected. Check the key and try again.`;
   }
   if (status === 413) {
     return `The file is too large for the server to accept while ${label}.${MP3_TIP}`;
@@ -64,7 +64,12 @@ function httpMessage(step: Step, status: number, body: string): string {
 
 // fetch() that rejects only on network-level problems. Translates those, and
 // any non-OK response, into a friendly Error instead of "Failed to fetch".
-async function apiFetch(url: string, init: RequestInit, step: Step): Promise<Response> {
+export async function apiFetch(
+  url: string,
+  init: RequestInit,
+  step: Step,
+  provider = "AssemblyAI"
+): Promise<Response> {
   let res: Response;
   try {
     res = await fetch(url, init);
@@ -82,7 +87,7 @@ async function apiFetch(url: string, init: RequestInit, step: Step): Promise<Res
 
   if (!res.ok) {
     const body = (await res.text().catch(() => "")).trim();
-    throw new Error(httpMessage(step, res.status, body));
+    throw new Error(httpMessage(step, res.status, body, provider));
   }
 
   return res;
@@ -90,7 +95,7 @@ async function apiFetch(url: string, init: RequestInit, step: Step): Promise<Res
 
 // Parse a JSON response, with a clear message if the body isn't JSON
 // (e.g. an HTML error page served by the SPA fallback when a route is missing).
-async function readJson<T>(res: Response, step: Step): Promise<T> {
+export async function readJson<T>(res: Response, step: Step): Promise<T> {
   const text = await res.text();
   try {
     return JSON.parse(text) as T;
@@ -204,7 +209,7 @@ export async function startTranscription(
   audioUrl: string,
   apiKey: string,
   languageCode?: string,
-  model: SpeechModel = "universal-3-5-pro"
+  model: AssemblyAIModel = "universal-3-5-pro"
 ): Promise<TranscriptResult> {
   const body: Record<string, unknown> = {
     audio_url: audioUrl,
@@ -253,7 +258,7 @@ export async function transcribeAudio(
   file: File,
   apiKey: string,
   languageCode?: string,
-  model: SpeechModel = "universal-3-5-pro",
+  model: AssemblyAIModel = "universal-3-5-pro",
   onStatusChange?: (status: string) => void
 ): Promise<TranscriptResult> {
   let audioUrl: string;

@@ -3,11 +3,13 @@ import type { TranscriptionProvider } from "../lib/types";
 
 const STORAGE_KEYS: Record<TranscriptionProvider, string> = {
   "assemblyai": "assemblyai-api-key",
+  "soniox": "soniox-api-key",
   "ivrit-ai": "runpod-api-key",
 };
 
 const LABELS: Record<TranscriptionProvider, string> = {
   "assemblyai": "AssemblyAI API Key",
+  "soniox": "Soniox API Key",
   "ivrit-ai": "RunPod API Key",
 };
 
