@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { FileAudio, Pause, Play, Upload, X } from "lucide-react";
+import { Music, Pause, Play, Upload, X } from "lucide-react";
 
 const ACCEPTED_FORMATS = [
   ".mp3", ".mp4", ".m4a", ".wav", ".webm",
@@ -94,6 +94,21 @@ function useAudioLength(file: File | null): number | null {
   return length && length.file === file ? length.seconds : null;
 }
 
+// How many 3px bars (with 2px gaps) fit the waveform's width, so it always
+// spans the card, re-measured when the window is resized.
+function useBarCount(el: HTMLElement | null): number {
+  const [count, setCount] = useState(56);
+  useEffect(() => {
+    if (!el) return;
+    const observer = new ResizeObserver(([entry]) => {
+      setCount(Math.max(8, Math.floor((entry.contentRect.width + 2) / 5)));
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [el]);
+  return count;
+}
+
 export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeconds, recorder }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
@@ -101,7 +116,9 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
   const metadataLength = useAudioLength(isRecording ? null : currentFile);
   const length = isRecording ? recordingSeconds : metadataLength;
   const playback = usePlayback(isRecording ? currentFile : null);
-  const bars = useMemo(() => waveBars(currentFile?.name ?? ""), [currentFile]);
+  const [waveEl, setWaveEl] = useState<HTMLDivElement | null>(null);
+  const barCount = useBarCount(waveEl);
+  const bars = useMemo(() => waveBars(currentFile?.name ?? "", barCount), [currentFile, barCount]);
 
   function handleFile(file: File) {
     const ext = "." + file.name.split(".").pop()?.toLowerCase();
@@ -181,7 +198,7 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
             </button>
           ) : (
             <div className="w-11 h-11 rounded-xl accent-gradient text-white grid place-items-center shrink-0">
-              <FileAudio className="w-5 h-5" />
+              <Music className="w-[18px] h-[18px]" />
             </div>
           )}
           <div className="flex-1 min-w-0">
@@ -205,15 +222,18 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
                 </>
               )}
             </p>
-            <div className="wave flex items-center gap-[2px] h-[30px] mt-2" aria-hidden="true">
+            {/* Reaches past the 14px gap into the remove button's padding and
+                stops 7px short of the visible ✕ glyph; the bars spread to fill
+                the row exactly, so that end is the same at every width. */}
+            <div
+              ref={setWaveEl}
+              className="wave flex items-center justify-between gap-[2px] h-[30px] mt-2 mr-[-17px] overflow-hidden"
+              aria-hidden="true"
+            >
               {bars.map((h, i) => (
                 <i
                   key={i}
-                  style={{
-                    height: h,
-                    animationDelay: `${(i % 9) * -0.13}s`,
-                    animationPlayState: playback.playing ? "running" : "paused",
-                  }}
+                  style={{ height: h, animationDelay: `${(i % 9) * -0.13}s` }}
                 />
               ))}
             </div>
@@ -232,13 +252,13 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
           </button>
         </div>
       ) : (
-        <div className="p-7 text-center">
+        <div className="p-[26px] text-center">
           <div className="w-[46px] h-[46px] mx-auto mb-3 rounded-[14px] bg-chip grid place-items-center transition-transform group-hover:-translate-y-[3px]">
             <Upload className="w-5 h-5 text-accent" />
           </div>
-          <p className="text-sm font-semibold text-ink">Drop your recording here</p>
-          <p className="text-[12.5px] text-muted mt-1">
-            or click to browse · MP3, M4A, WAV, MP4, WebM, FLAC or OGG
+          <p className="text-sm leading-tight font-semibold text-ink">Drop your recording here</p>
+          <p className="text-[12.5px] leading-tight text-muted mt-1">
+            MP3, M4A, WAV, MP4, WebM, FLAC or OGG
           </p>
           {recorder && (
             <div

@@ -39,16 +39,16 @@ export function ExportButtons({
   }
 
   const btnClass =
-    "px-3 py-1.5 text-[12.5px] font-semibold rounded-[10px] bg-chip text-ink border border-line hover:border-accent transition-colors";
+    "inline-flex items-center gap-1.5 px-3 py-[7px] text-[12.5px] leading-tight font-semibold rounded-[10px] bg-chip text-ink border border-line hover:border-accent transition-colors";
 
   return (
     <div className="flex items-center gap-1.5">
-      <Download className="w-4 h-4 text-faint mr-0.5" aria-label="Download" />
       <button type="button" onClick={downloadMarkdown} className={btnClass}>
+        <Download className="w-[13px] h-[13px]" strokeWidth={2.2} />
         Markdown
       </button>
       <button type="button" onClick={downloadTxt} className={btnClass}>
-        Text
+        TXT
       </button>
       <button type="button" onClick={downloadDocx} className={btnClass}>
         Word

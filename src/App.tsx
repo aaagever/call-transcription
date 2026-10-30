@@ -11,7 +11,7 @@ import { SectionLabel } from "./components/SectionLabel";
 import { ThemeToggle } from "./components/ThemeToggle";
 import { AudioLines, CalendarDays, Globe, MessageSquareText, Sparkles } from "lucide-react";
 import { TranscribeProgress } from "./components/TranscribeProgress";
-import { formatElapsed } from "./lib/elapsed";
+import { formatDuration as formatRunTime } from "./lib/elapsed";
 import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
 import { transcribeWithSoniox } from "./lib/soniox-api";
@@ -224,7 +224,7 @@ function App() {
     : !apiKey
       ? `Add your ${PROVIDER_NAMES[provider]} API key above to start.`
       : alreadyTranscribed
-          ? `${lastRunMs !== null ? `Transcribed in ${formatElapsed(lastRunMs)}. ` : ""}Change the file, language or model to run it again.`
+          ? `${lastRunMs !== null ? `Done in ${formatRunTime(lastRunMs)}. ` : ""}Change the file, language or model to run it again.`
           : null;
 
   const recordingDateLabel = formatRecordingDate(recordingDate);
@@ -243,7 +243,7 @@ function App() {
             <AudioLines className="w-[18px] h-[18px] text-white" strokeWidth={2.2} />
           </div>
           <div className="flex-1 min-w-0">
-            <h1 className="text-[22px] font-semibold tracking-tight text-ink whitespace-nowrap">Call Transcription</h1>
+            <h1 className="text-[22px] leading-tight font-semibold tracking-tight text-ink whitespace-nowrap">Call Transcription</h1>
             <p className="hidden sm:block text-[13px] text-muted mt-0.5">
               Speaker-labeled transcripts, exported to Markdown, text or Word
             </p>
@@ -253,10 +253,12 @@ function App() {
 
         <div className="glass-card rounded-[20px] p-6 divide-y divide-divider [&>*]:py-[22px] [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
           {/* The model decides the provider, so its key field sits right under it. */}
-          <section className="space-y-2.5">
+          <section>
             <SectionLabel icon={Sparkles}>Model</SectionLabel>
             <ModelSelector value={model} onChange={handleModelChange} />
-            <ApiKeyInput key={provider} provider={provider} onKeyChange={handleKeyChange} />
+            <div className="mt-2.5">
+              <ApiKeyInput key={provider} provider={provider} onKeyChange={handleKeyChange} />
+            </div>
           </section>
 
           <section className="grid grid-cols-1 sm:grid-cols-2 gap-x-2.5 gap-y-4">
@@ -295,11 +297,7 @@ function App() {
                 isTranscribing ? "busy" : ""
               }`}
             >
-              {isTranscribing
-                ? "Transcribing…"
-                : alreadyTranscribed
-                  ? "Transcribed"
-                  : "Transcribe"}
+              {isTranscribing ? "Transcribing…" : "Transcribe"}
             </button>
             {disabledReason && (
               <p className="text-xs text-muted text-center">{disabledReason}</p>
@@ -315,17 +313,18 @@ function App() {
 
         {transcript?.utterances && transcript.utterances.length > 0 && (
           <div className="glass-card rise rounded-[20px] p-6 mt-5">
-            <div className="flex items-start justify-between gap-3 flex-wrap mb-3.5">
+            <div className="flex items-center justify-between gap-3 flex-wrap mb-3.5">
               <div>
                 <h2 className="flex items-center gap-2 text-base font-semibold tracking-tight text-ink">
                   <MessageSquareText className="w-4 h-4 text-accent" />
                   Transcript
                 </h2>
-                <p className="text-xs text-faint mt-1">
-                  {recordingDateLabel
-                    ? `Recording date: ${recordingDateLabel}`
-                    : "No recording date set. Set it above to include it in the downloads."}
-                </p>
+                {/* Only worth a line when the downloads will go out without a date. */}
+                {!recordingDateLabel && (
+                  <p className="text-xs text-faint mt-1">
+                    No recording date set. Set it above to include it in the downloads.
+                  </p>
+                )}
               </div>
               <ExportButtons
                 utterances={transcript.utterances}

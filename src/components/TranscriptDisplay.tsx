@@ -63,7 +63,7 @@ export function TranscriptDisplay({ utterances }: Props) {
                   Speaker {u.speaker}
                   {/* Times always read left to right, even inside a Hebrew transcript. */}
                   <span className="font-medium text-faint tabular-nums" dir="ltr">
-                    {formatTime(u.start)} - {formatTime(u.end)}
+                    {formatTime(u.start)}
                   </span>
                 </div>
                 <p className={`mt-1 text-ink leading-[1.75] ${isRtl ? "font-hebrew text-[15px]" : "text-sm"}`}>

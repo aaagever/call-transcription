@@ -64,15 +64,18 @@ export function ApiKeyInput({ provider, onKeyChange }: Props) {
         placeholder="Paste your API key"
         className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-ink placeholder:text-faint"
       />
-      <button
-        type="button"
-        onClick={() => setVisible(!visible)}
-        aria-label={visible ? "Hide key" : "Show key"}
-        title={visible ? "Hide key" : "Show key"}
-        className="p-1.5 rounded-md text-faint hover:text-ink"
-      >
-        {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-      </button>
+      {/* Show/hide only while a key is being typed; a saved key just says so. */}
+      {!isSaved && key !== "" && (
+        <button
+          type="button"
+          onClick={() => setVisible(!visible)}
+          aria-label={visible ? "Hide key" : "Show key"}
+          title={visible ? "Hide key" : "Show key"}
+          className="p-1.5 rounded-md text-faint hover:text-ink"
+        >
+          {visible ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+        </button>
+      )}
       {isSaved ? (
         <span
           title="This key is saved. Edit it to save a different one."

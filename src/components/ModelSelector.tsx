@@ -36,10 +36,10 @@ export function ModelSelector({ value, onChange }: Props) {
             >
               {selected && <span className="w-1.5 h-1.5 rounded-full bg-white" />}
             </span>
-            <div className="text-[11px] font-medium text-muted">{m.provider}</div>
-            <div className="text-sm font-semibold mt-0.5 tracking-tight text-ink">{m.name}</div>
+            <div className="text-[11px] leading-tight font-medium text-muted">{m.provider}</div>
+            <div className="text-sm leading-tight font-semibold mt-[3px] tracking-tight text-ink">{m.name}</div>
             <span
-              className={`inline-block mt-2.5 text-[11px] font-semibold px-2 py-0.5 rounded-full ${
+              className={`inline-block mt-2.5 text-[11px] leading-tight font-semibold px-2 py-[3px] rounded-full ${
                 selected && m.best ? "accent-gradient text-white" : "bg-chip text-muted"
               }`}
             >
