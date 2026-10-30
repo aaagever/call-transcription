@@ -38,7 +38,7 @@ const UPLOAD_STEPS: ReadonlySet<Step> = new Set(["upload", "create", "part", "co
 const MP3_TIP =
   " If this is a large recording, extract the audio to an MP3 (much smaller) and upload that instead.";
 
-function httpMessage(step: Step, status: number, body: string, provider: string): string {
+export function httpMessage(step: Step, status: number, body: string, provider: string): string {
   const label = STEP_LABEL[step];
   const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : " Please try again in a moment.";
 
@@ -62,6 +62,12 @@ function httpMessage(step: Step, status: number, body: string, provider: string)
   return `Something went wrong while ${label} (status ${status}).${detail}`;
 }
 
+// Message for a request that never got a response (offline, DNS, reset, CORS).
+export function networkMessage(step: Step): string {
+  const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : "";
+  return `Couldn't reach the server while ${STEP_LABEL[step]}. Try reloading the page, and check your connection.${tip}`;
+}
+
 // fetch() that rejects only on network-level problems. Translates those, and
 // any non-OK response, into a friendly Error instead of "Failed to fetch".
 export async function apiFetch(
@@ -79,10 +85,7 @@ export async function apiFetch(
     // URL (where /api routes don't exist). Keep the raw error in the console
     // for debugging, show the user something they can act on.
     console.error(`[transcription] network error while ${STEP_LABEL[step]}:`, err);
-    const tip = UPLOAD_STEPS.has(step) ? MP3_TIP : "";
-    throw new Error(
-      `Couldn't reach the server while ${STEP_LABEL[step]}. Try reloading the page, and check your connection.${tip}`
-    );
+    throw new Error(networkMessage(step));
   }
 
   if (!res.ok) {

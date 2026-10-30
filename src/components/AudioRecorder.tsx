@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 
 interface Props {
-  onRecordingComplete: (file: File) => void;
+  /** Called with the recording and its length in seconds. */
+  onRecordingComplete: (file: File, seconds: number) => void;
 }
 
 export function AudioRecorder({ onRecordingComplete }: Props) {
@@ -10,6 +11,7 @@ export function AudioRecorder({ onRecordingComplete }: Props) {
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const startedAtRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -38,11 +40,12 @@ export function AudioRecorder({ onRecordingComplete }: Props) {
         const file = new File([blob], `recording-${Date.now()}.webm`, {
           type: mimeType,
         });
-        onRecordingComplete(file);
+        onRecordingComplete(file, (Date.now() - startedAtRef.current) / 1000);
       };
 
       mediaRecorderRef.current = recorder;
       recorder.start(1000);
+      startedAtRef.current = Date.now();
       setRecording(true);
       setDuration(0);
 

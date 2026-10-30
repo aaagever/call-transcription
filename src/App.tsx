@@ -7,6 +7,8 @@ import { AudioRecorder } from "./components/AudioRecorder";
 import { RecordingDateInput } from "./components/RecordingDateInput";
 import { TranscriptDisplay } from "./components/TranscriptDisplay";
 import { ExportButtons } from "./components/ExportButtons";
+import { TranscribeProgress } from "./components/TranscribeProgress";
+import { formatElapsed } from "./lib/elapsed";
 import { transcribeAudio } from "./lib/api";
 import { transcribeWithIvrit } from "./lib/ivrit-api";
 import { transcribeWithSoniox } from "./lib/soniox-api";
@@ -71,6 +73,8 @@ function App() {
   // The model decides the provider, and with it which API key is in use.
   const provider = MODEL_PROVIDER[model];
   const [audioFile, setAudioFile] = useState<File | null>(null);
+  // Length in seconds when audioFile was recorded here; null for uploaded files.
+  const [recordingSeconds, setRecordingSeconds] = useState<number | null>(null);
   // Date of the meeting/recording itself (not of the transcription), as "YYYY-MM-DD".
   const [recordingDate, setRecordingDate] = useState("");
   // True while recordingDate is the prefilled file date and the user has not edited it.
@@ -79,6 +83,9 @@ function App() {
   const [status, setStatus] = useState("");
   const [error, setError] = useState("");
   const [isTranscribing, setIsTranscribing] = useState(false);
+  // When the current run started, and how long the last successful one took.
+  const [startedAt, setStartedAt] = useState<number | null>(null);
+  const [lastRunMs, setLastRunMs] = useState<number | null>(null);
   // Inputs of the last successful transcription. While the current inputs
   // still match them, the Transcribe button stays disabled so the same file
   // is not sent again by accident.
@@ -97,9 +104,30 @@ function App() {
   // recording that is usually the meeting day; the user can correct it.
   const handleFileSelect = useCallback((file: File) => {
     setAudioFile(file);
+    setRecordingSeconds(null);
     setRecordingDate(toIsoDate(file.lastModified));
     setDateFromFile(true);
   }, []);
+
+  // A recording made in the app exists only in this browser, so the file card
+  // offers to save it and to play it back. Its length comes from the recorder:
+  // MediaRecorder's webm files usually report no length of their own.
+  const handleRecordingComplete = useCallback((file: File, seconds: number) => {
+    setAudioFile(file);
+    setRecordingSeconds(seconds);
+    setRecordingDate(toIsoDate(file.lastModified));
+    setDateFromFile(true);
+  }, []);
+
+  // Removing the file also drops the date it prefilled; a date typed by hand stays.
+  function handleFileClear() {
+    setAudioFile(null);
+    setRecordingSeconds(null);
+    if (dateFromFile) {
+      setRecordingDate("");
+      setDateFromFile(false);
+    }
+  }
 
   function handleDateChange(isoDate: string) {
     setRecordingDate(isoDate);
@@ -119,6 +147,8 @@ function App() {
     setError("");
     setTranscript(null);
     setIsTranscribing(true);
+    const t0 = Date.now();
+    setStartedAt(t0);
 
     try {
       const langCode = language === "auto" ? undefined : language;
@@ -150,6 +180,7 @@ function App() {
 
       setTranscript(result);
       setLastRun({ file: audioFile, apiKey, language, model });
+      setLastRunMs(Date.now() - t0);
       setStatus("");
       playTone("success");
     } catch (err) {
@@ -158,6 +189,7 @@ function App() {
       playTone("error");
     } finally {
       setIsTranscribing(false);
+      setStartedAt(null);
     }
   }
 
@@ -167,6 +199,16 @@ function App() {
     lastRun.apiKey === apiKey &&
     lastRun.language === language &&
     lastRun.model === model;
+
+  // Why Transcribe can't run right now, shown under the button rather than
+  // only in a hover tooltip. Null while it can run, or while it is running.
+  const disabledReason = isTranscribing
+    ? null
+    : !apiKey
+      ? `Add your ${PROVIDER_NAMES[provider]} API key above to start.`
+      : alreadyTranscribed
+          ? `${lastRunMs !== null ? `Transcribed in ${formatElapsed(lastRunMs)}. ` : ""}Change the file, language or model to run it again.`
+          : null;
 
   const recordingDateLabel = formatRecordingDate(recordingDate);
 
@@ -190,10 +232,15 @@ function App() {
 
           <div className="border-t border-gray-100 pt-4">
             <div className="flex items-center gap-3 mb-3">
-              <AudioRecorder onRecordingComplete={handleFileSelect} />
+              <AudioRecorder onRecordingComplete={handleRecordingComplete} />
               <span className="text-sm text-gray-400">or</span>
             </div>
-            <FileUploader onFileSelect={handleFileSelect} currentFile={audioFile} />
+            <FileUploader
+              onFileSelect={handleFileSelect}
+              onClear={handleFileClear}
+              currentFile={audioFile}
+              recordingSeconds={recordingSeconds}
+            />
             <div className="mt-3">
               <RecordingDateInput
                 value={recordingDate}
@@ -206,16 +253,7 @@ function App() {
           <div className="border-t border-gray-100 pt-4">
             <button
               onClick={handleTranscribe}
-              disabled={isTranscribing || !apiKey || !audioFile || alreadyTranscribed}
-              title={
-                !apiKey
-                  ? "Enter your API key first"
-                  : !audioFile
-                    ? "Upload or record an audio file first"
-                    : alreadyTranscribed
-                      ? "Already transcribed with these settings. Change the file, language or model to run it again."
-                      : undefined
-              }
+              disabled={isTranscribing || !audioFile || disabledReason !== null}
               className="w-full px-4 py-2.5 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
             >
               {isTranscribing
@@ -224,31 +262,13 @@ function App() {
                   ? "Transcribed"
                   : "Transcribe"}
             </button>
+            {disabledReason && (
+              <p className="mt-2 text-xs text-gray-500 text-center">{disabledReason}</p>
+            )}
           </div>
 
-          {status && (
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <svg
-                className="w-4 h-4 animate-spin"
-                viewBox="0 0 24 24"
-                fill="none"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                />
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-                />
-              </svg>
-              {status}
-            </div>
+          {isTranscribing && startedAt !== null && (
+            <TranscribeProgress status={status} startedAt={startedAt} />
           )}
 
           {error && (
@@ -278,7 +298,7 @@ function App() {
                 sourceFileName={lastRun?.file.name ?? ""}
               />
             </div>
-            <TranscriptDisplay utterances={transcript.utterances} language={language} />
+            <TranscriptDisplay utterances={transcript.utterances} />
           </div>
         )}
       </div>

@@ -16,15 +16,26 @@ function formatTime(ms: number): string {
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
-const RTL_LANGUAGES = new Set(["he", "ar", "fa", "ur", "yi"]);
+// Hebrew, Arabic and the scripts written like them (Persian, Urdu, Yiddish).
+const RTL_LETTER = /[\u0590-\u05FF\u0600-\u06FF\u0750-\u077F\uFB1D-\uFDFF\uFE70-\uFEFF]/g;
+const LTR_LETTER = /[A-Za-z\u00C0-\u024F\u0370-\u03FF\u0400-\u04FF]/g;
+
+// Direction comes from the transcript itself, not the Language menu, so an
+// Auto-detect run on a Hebrew call still reads right to left. English terms
+// inside a Hebrew call don't tip it: the majority script decides.
+function isRtlText(utterances: Utterance[]): boolean {
+  const text = utterances.map((u) => u.text).join(" ");
+  const rtl = text.match(RTL_LETTER)?.length ?? 0;
+  const ltr = text.match(LTR_LETTER)?.length ?? 0;
+  return rtl > ltr;
+}
 
 interface Props {
   utterances: Utterance[];
-  language?: string;
 }
 
-export function TranscriptDisplay({ utterances, language }: Props) {
-  const isRtl = language ? RTL_LANGUAGES.has(language) : false;
+export function TranscriptDisplay({ utterances }: Props) {
+  const isRtl = isRtlText(utterances);
   const speakerIds = [...new Set(utterances.map((u) => u.speaker))];
 
   function getSpeakerColor(speaker: string): string {
@@ -40,7 +51,8 @@ export function TranscriptDisplay({ utterances, language }: Props) {
             <span className={`font-semibold text-sm ${getSpeakerColor(u.speaker)}`}>
               Speaker {u.speaker}
             </span>
-            <span className="text-xs text-gray-400">
+            {/* Times always read left to right, even inside a Hebrew transcript. */}
+            <span className="text-xs text-gray-400" dir="ltr">
               {formatTime(u.start)} - {formatTime(u.end)}
             </span>
           </div>

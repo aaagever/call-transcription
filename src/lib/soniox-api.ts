@@ -1,4 +1,4 @@
-import { apiFetch, readJson } from "./api";
+import { apiFetch, httpMessage, networkMessage, readJson } from "./api";
 import type {
   SonioxToken,
   SonioxTranscript,
@@ -18,18 +18,40 @@ function authHeaders(apiKey: string): Record<string, string> {
   return { Authorization: `Bearer ${apiKey}` };
 }
 
-async function uploadFile(file: File, apiKey: string): Promise<string> {
+// XMLHttpRequest rather than fetch, because only XHR reports upload progress.
+function uploadFile(
+  file: File,
+  apiKey: string,
+  onProgress: (fraction: number) => void
+): Promise<string> {
   const formData = new FormData();
   formData.append("file", file);
 
-  const res = await apiFetch(
-    `${SONIOX_BASE}/files`,
-    { method: "POST", headers: authHeaders(apiKey), body: formData },
-    "upload",
-    PROVIDER
-  );
-  const { id } = await readJson<{ id: string }>(res, "upload");
-  return id;
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${SONIOX_BASE}/files`);
+    xhr.setRequestHeader("Authorization", `Bearer ${apiKey}`);
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(e.loaded / e.total);
+    };
+    xhr.onload = () => {
+      const body = (xhr.responseText ?? "").trim();
+      if (xhr.status < 200 || xhr.status >= 300) {
+        reject(new Error(httpMessage("upload", xhr.status, body, PROVIDER)));
+        return;
+      }
+      try {
+        resolve((JSON.parse(body) as { id: string }).id);
+      } catch {
+        reject(new Error(networkMessage("upload")));
+      }
+    };
+    xhr.onerror = () => {
+      console.error("[transcription] network error while uploading to Soniox");
+      reject(new Error(networkMessage("upload")));
+    };
+    xhr.send(formData);
+  });
 }
 
 async function createTranscription(
@@ -149,7 +171,9 @@ export async function transcribeWithSoniox(
   onStatusChange?: (status: string) => void
 ): Promise<TranscriptResult> {
   onStatusChange?.("Uploading audio...");
-  const fileId = await uploadFile(file, apiKey);
+  const fileId = await uploadFile(file, apiKey, (fraction) => {
+    onStatusChange?.(`Uploading audio... ${Math.round(fraction * 100)}%`);
+  });
   let transcriptionId: string | null = null;
 
   try {
