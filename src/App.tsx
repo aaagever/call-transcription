@@ -178,11 +178,14 @@ function App() {
         </h1>
 
         <div className="space-y-4 bg-white rounded-xl border border-gray-200 p-6">
-          <ApiKeyInput key={provider} provider={provider} onKeyChange={handleKeyChange} />
-
-          <div className="border-t border-gray-100 pt-4 space-y-3">
-            <LanguageSelector value={language} onChange={setLanguage} />
+          {/* The model decides the provider, so its key field sits right under it. */}
+          <div className="space-y-3">
             <ModelSelector value={model} onChange={handleModelChange} />
+            <ApiKeyInput key={provider} provider={provider} onKeyChange={handleKeyChange} />
+          </div>
+
+          <div className="border-t border-gray-100 pt-4">
+            <LanguageSelector value={language} onChange={setLanguage} />
           </div>
 
           <div className="border-t border-gray-100 pt-4">
