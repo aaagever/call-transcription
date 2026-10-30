@@ -53,16 +53,29 @@ export function ApiKeyInput({ provider, onKeyChange }: Props) {
       <label htmlFor="api-key" className="text-[13px] text-muted whitespace-nowrap">
         {LABELS[provider]}
       </label>
+      {/* A plain text field drawn as dots, not type="password": password
+          managers treat a password field as a login and fill in a saved
+          password, which replaced the key here a moment after it appeared. */}
       <input
         id="api-key"
-        type={visible ? "text" : "password"}
+        name="provider-api-key"
+        type="text"
+        autoComplete="off"
+        autoCorrect="off"
+        autoCapitalize="off"
+        spellCheck={false}
+        data-1p-ignore
+        data-lpignore="true"
+        data-form-type="other"
         value={key}
         onChange={(e) => setKey(e.target.value)}
         onKeyDown={(e) => {
           if (e.key === "Enter") handleSave();
         }}
         placeholder="Paste your API key"
-        className="flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-ink placeholder:text-faint"
+        className={`flex-1 min-w-0 bg-transparent border-0 outline-none text-sm text-ink placeholder:text-faint ${
+          visible ? "" : "masked"
+        }`}
       />
       {/* Show/hide only while a key is being typed; a saved key just says so. */}
       {!isSaved && key !== "" && (

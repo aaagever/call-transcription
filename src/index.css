@@ -81,6 +81,9 @@ select option {
   color: #111;
 }
 
+/* The API key: text drawn as dots, so password managers leave it alone. */
+.masked { -webkit-text-security: disc; text-security: disc; }
+
 /* ---------- background ---------- */
 .page-bg {
   position: fixed;
