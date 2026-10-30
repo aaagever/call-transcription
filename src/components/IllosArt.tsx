@@ -12,6 +12,11 @@ interface Props {
   style?: CSSProperties;
 }
 
+// One object for every render: React 19 rewrites innerHTML whenever this prop's
+// object changes, which replaced the drawing under the pointer on each re-render
+// and swallowed the click if that happened between mouse down and mouse up.
+const ART_HTML = { __html: uploadsSvg };
+
 // Decorative: the drop zone's own text says what it means.
 export function IllosArt({ className, style }: Props) {
   const ref = useRef<HTMLDivElement>(null);
@@ -22,7 +27,7 @@ export function IllosArt({ className, style }: Props) {
       aria-hidden="true"
       className={`[&>svg]:h-auto [&>svg]:w-full ${className ?? ""}`}
       style={{ "--illos-play": "paused", ...style } as CSSProperties}
-      dangerouslySetInnerHTML={{ __html: uploadsSvg }}
+      dangerouslySetInnerHTML={ART_HTML}
     />
   );
 }

@@ -49,6 +49,7 @@ All files are under `src/` in this project. Both apps use React 19, Vite and Tai
 ## 3. Gotchas found while building this
 - **Password managers fill `type="password"` fields.** t2s's `ApiKeyInput.tsx` (line ~86) has the same bug: fix it the same way (text field, `.masked`, `autoComplete="off"`, `data-1p-ignore`, `data-lpignore="true"`, `data-form-type="other"`).
 - **Run Vite from the app's own folder.** Started from another folder, Tailwind scans the wrong files and silently drops classes. The production build is unaffected.
+- **Keep `dangerouslySetInnerHTML`'s object outside the component.** In React 19 a new `{ __html }` object rewrites the element's contents on every render. For the Illos drawing that meant the first click on it did nothing: pressing the mouse focused the drop zone, the re-render replaced the drawing under the pointer, and the browser fired no click. A second click worked, since focus no longer changed. `IllosArt.tsx` uses a constant.
 - **`clip-path` cuts off outer box-shadows.** That is why the chosen card in the phone deck has no clip.
 - **Screenshots catch animations mid-way.** If a screenshot looks wrong right after a click or a reload, wait a second and take it again before changing code.
 - **The browser pane's clipboard and downloads don't reach the Mac.** To take code from 21st.dev (signed in), read it from the page; public demo pages on `cdn.21st.dev` can be fetched with curl. Check a hash after copying anything long.

@@ -287,11 +287,8 @@ export function FileUploader({ onFileSelect, onClear, currentFile, recordingSeco
             MP3, M4A, WAV, MP4, WebM, FLAC or OGG
           </p>
           {recorder && (
-            <div
-              className="flex items-center justify-center gap-2.5 mt-4 text-xs text-faint"
-              onClick={(e) => e.stopPropagation()}
-            >
-              or {recorder}
+            <div className="flex items-center justify-center gap-2.5 mt-4 text-xs text-faint">
+              or <span onClick={(e) => e.stopPropagation()}>{recorder}</span>
             </div>
           )}
         </div>
